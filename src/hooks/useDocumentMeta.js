@@ -24,7 +24,7 @@ const ROOM_META = {
     studio: {
         path: '/studio',
         title: 'The Studio — Abdullah Ibn Yousuf',
-        description: 'Visit Abdullah Ibn Yousuf\'s interactive 3D studio. Selected studio content will be added in a future update.',
+        description: 'Explore Abdullah Ibn Yousuf\'s interactive 3D studio with his profile, software and AI capabilities, and technology skills.',
     },
     contact: {
         path: '/contact',

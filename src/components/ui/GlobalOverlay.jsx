@@ -69,14 +69,13 @@ const GlobalOverlay = () => {
 };
 
 const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
-    if (!content) return null;
-
     const label = content.platformConfig?.label || 'Content';
 
     // GSAP TextPlugin typing effect for description
     const descriptionRef = useRef(null);
     useEffect(() => {
-        if (isOpen && content.description && descriptionRef.current && content.layout !== 'certificate_grid') {
+        const supportsTypedDescription = !['certificate_grid', 'profile', 'skill_group'].includes(content.layout);
+        if (isOpen && supportsTypedDescription && content.description && descriptionRef.current) {
             gsap.killTweensOf(descriptionRef.current);
             gsap.fromTo(descriptionRef.current,
                 { text: "" },
@@ -240,7 +239,13 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
     const maskStyle = (content.layout === 'certificate_grid') ? {
         maskImage: 'none',
         WebkitMaskImage: 'none'
-    } : isMobile ? {
+    } : content.layout === 'profile' ? (isMobile ? {
+        maskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 42%)',
+        WebkitMaskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 42%)'
+    } : {
+        maskImage: 'radial-gradient(circle at 38% 50%, transparent 0%, transparent 13%, black 38%)',
+        WebkitMaskImage: 'radial-gradient(circle at 38% 50%, transparent 0%, transparent 13%, black 38%)'
+    }) : isMobile ? {
         // Mobile: Monitor jest na górze (50% szerokości, 25% wysokości od góry)
         maskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 40%)',
         WebkitMaskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 40%)'
@@ -322,6 +327,16 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                             right: 'auto',
                             bottom: 'auto',
                             transform: isOpen ? 'translate(-50%, -50%)' : 'translate(-50%, 100%)',
+                        } : content.layout === 'profile' ? {
+                            width: isMobile ? '92vw' : 'clamp(420px, 48vw, 760px)',
+                            maxHeight: isMobile ? '72vh' : '82vh',
+                            right: isMobile ? 'auto' : 'clamp(1.5rem, 5vw, 7rem)',
+                            left: isMobile ? '50%' : 'auto',
+                            top: isMobile ? 'auto' : '50%',
+                            bottom: isMobile ? '6rem' : 'auto',
+                            transform: isMobile
+                                ? (isOpen ? 'translate(-50%, 0) rotate(-1deg)' : 'translate(-50%, 120%) rotate(8deg)')
+                                : (isOpen ? 'translateY(-50%) rotate(0.5deg)' : 'translate(120%, -50%) rotate(10deg)'),
                         } : {})
                     }}
                     className="studio-paper-card"
@@ -495,6 +510,146 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                 </div>
                             )}
                         </div>
+                    ) : content.layout === 'profile' ? (
+                        <div
+                            ref={scrollContainerRef}
+                            style={{
+                                overflowY: 'auto',
+                                paddingRight: '0.5rem',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '1rem',
+                                ...getStaggerStyle(180)
+                            }}
+                        >
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '0.55rem',
+                                paddingBottom: '1rem',
+                                borderBottom: '1px dashed #9a9a9a'
+                            }}>
+                                {[content.status, content.location, content.education].filter(Boolean).map((item) => (
+                                    <span key={item} style={{
+                                        padding: '0.35rem 0.65rem',
+                                        backgroundColor: '#e8f8fb',
+                                        border: '1px solid #1a1a1a',
+                                        borderRadius: '2px 12px 3px 10px',
+                                        fontSize: '0.78rem',
+                                        fontWeight: 700
+                                    }}>
+                                        {item}
+                                    </span>
+                                ))}
+                            </div>
+
+                            <p style={{
+                                lineHeight: 1.65,
+                                color: '#1a1a1a',
+                                fontWeight: 700,
+                                fontSize: '1.05rem',
+                                margin: 0
+                            }}>
+                                {content.description}
+                            </p>
+
+                            {content.sections?.map((section) => (
+                                <section key={section.title}>
+                                    <h3 style={{
+                                        margin: '0 0 0.35rem',
+                                        fontFamily: "'Rubik Scribble', cursive",
+                                        fontSize: '1.25rem'
+                                    }}>
+                                        {section.title}
+                                    </h3>
+                                    <p style={{ margin: 0, lineHeight: 1.6, fontWeight: 600 }}>
+                                        {section.body}
+                                    </p>
+                                </section>
+                            ))}
+
+                            <section>
+                                <h3 style={{
+                                    margin: '0 0 0.6rem',
+                                    fontFamily: "'Rubik Scribble', cursive",
+                                    fontSize: '1.25rem'
+                                }}>
+                                    How I work
+                                </h3>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem' }}>
+                                    {content.qualities?.map((quality) => (
+                                        <span key={quality} style={{
+                                            padding: '0.45rem 0.7rem',
+                                            backgroundColor: '#fff8cf',
+                                            border: '1.5px solid #1a1a1a',
+                                            boxShadow: '2px 2px 0 rgba(0,0,0,0.1)',
+                                            fontWeight: 700
+                                        }}>
+                                            {quality}
+                                        </span>
+                                    ))}
+                                </div>
+                            </section>
+
+                            <p style={{
+                                margin: '0.25rem 0 0',
+                                padding: '0.8rem 1rem',
+                                backgroundColor: '#bfeef7',
+                                border: '2px solid #1a1a1a',
+                                fontWeight: 800,
+                                lineHeight: 1.45
+                            }}>
+                                {content.availability}
+                            </p>
+                        </div>
+                    ) : content.layout === 'skill_group' ? (
+                        <>
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '1rem',
+                                fontSize: '0.8rem',
+                                color: '#666',
+                                borderBottom: '1px dashed #ccc',
+                                paddingBottom: '1rem',
+                                ...getStaggerStyle(200)
+                            }}>
+                                <strong>{content.date}</strong>
+                                <span>{content.skills?.length || 0} technologies</span>
+                            </div>
+
+                            <p style={{
+                                lineHeight: 1.6,
+                                color: '#1a1a1a',
+                                fontWeight: 700,
+                                fontSize: '1.05rem',
+                                margin: 0,
+                                ...getStaggerStyle(280)
+                            }}>
+                                {content.details || content.description}
+                            </p>
+
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '0.65rem',
+                                alignContent: 'flex-start',
+                                ...getStaggerStyle(360)
+                            }}>
+                                {content.skills?.map((skill) => (
+                                    <span key={skill} style={{
+                                        padding: '0.5rem 0.75rem',
+                                        backgroundColor: '#e8f8fb',
+                                        border: '1.5px solid #1a1a1a',
+                                        borderRadius: '3px 12px 2px 10px',
+                                        boxShadow: '2px 2px 0 rgba(0,0,0,0.1)',
+                                        fontWeight: 800
+                                    }}>
+                                        {skill}
+                                    </span>
+                                ))}
+                            </div>
+                        </>
                     ) : (
                         /* === LAYOUT: DEFAULT (The Studio Style) === */
                         <>
@@ -529,20 +684,22 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                             </p>
 
                             {/* Action Button */}
-                            <div style={{
-                                marginTop: 'auto',
-                                paddingTop: '1rem',
-                                ...getStaggerStyle(400)
-                            }}>
-                                <a
-                                    href={content.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="studio-action-button"
-                                >
-                                    Open Link ↗
-                                </a>
-                            </div>
+                            {content.url && (
+                                <div style={{
+                                    marginTop: 'auto',
+                                    paddingTop: '1rem',
+                                    ...getStaggerStyle(400)
+                                }}>
+                                    <a
+                                        href={content.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="studio-action-button"
+                                    >
+                                        Open Link ↗
+                                    </a>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

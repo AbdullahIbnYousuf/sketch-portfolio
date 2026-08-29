@@ -21,7 +21,7 @@ const ROOM_CONFIG = {
 
 const SUBTITLES = {
     'THE GALLERY': 'Explore my creative projects',
-    'THE STUDIO': 'Watch behind the scenes',
+    'THE STUDIO': 'Explore my profile and capabilities',
     'DEV DIARY': 'My development journey',
     "LET'S CONNECT": 'Get in touch with me'
 };

@@ -1,5 +1,6 @@
 import { useScene } from '../../context/SceneContext';
-import { useGalleryProjects, useStudioContent, useAwards } from '../../hooks/useSanityData';
+import { useGalleryProjects, useAwards } from '../../hooks/useSanityData';
+import { CONTENT_DATA as studioCapabilities, PROFILE_DATA } from '../canvas/rooms/Studio/contentData';
 import '../../styles/ScreenReaderOverlay.scss';
 
 /**
@@ -10,11 +11,10 @@ import '../../styles/ScreenReaderOverlay.scss';
  * Visually hidden via .sr-only but fully accessible to assistive tech.
  */
 const ScreenReaderOverlay = () => {
-    const { hasEntered, isInRoom, currentRoom, teleportTo, requestExit } = useScene();
+    const { hasEntered, isInRoom, currentRoom, teleportTo, requestExit, openOverlay } = useScene();
     
     // Pobieranie danych do wygenerowania niewidocznego HTML-a dla SEO / robotów
     const projects = useGalleryProjects();
-    const studio = useStudioContent();
     const awards = useAwards();
 
     return (
@@ -54,7 +54,7 @@ const ScreenReaderOverlay = () => {
                             </li>
                             <li>
                                 <button onClick={() => teleportTo('studio')} type="button">
-                                    The Studio — Technologies and experience
+                                    The Studio — Profile, capabilities, and technologies
                                 </button>
                             </li>
                         </ul>
@@ -125,18 +125,48 @@ const ScreenReaderOverlay = () => {
                         {currentRoom === 'studio' && (
                             <div aria-label="Studio room content">
                                 <h3>The Studio</h3>
-                                <p>The Studio is being kept for future selected content. No placeholder articles are presented here.</p>
+                                <button
+                                    type="button"
+                                    aria-label="Open Abdullah's dossier"
+                                    onClick={() => openOverlay(PROFILE_DATA)}
+                                >
+                                    Open Abdullah&apos;s dossier
+                                </button>
+                                <p>{PROFILE_DATA.description}</p>
+                                <p>{PROFILE_DATA.status}. {PROFILE_DATA.location}.</p>
+                                <p>{PROFILE_DATA.availability}</p>
 
-                                {studio && studio.length > 0 && (
+                                <section>
+                                    <h4>About Abdullah</h4>
+                                    {PROFILE_DATA.sections.map((section) => (
+                                        <div key={section.title}>
+                                            <h5>{section.title}</h5>
+                                            <p>{section.body}</p>
+                                        </div>
+                                    ))}
                                     <ul>
-                                        {studio.map((s, i) => (
-                                            <li key={i}>
-                                                <h4>{s.title} ({s.platform})</h4>
-                                                <p>{s.description}</p>
-                                                {s.url && <a href={s.url}>View content</a>}
+                                        {PROFILE_DATA.qualities.map((quality) => (
+                                            <li key={quality}>{quality}</li>
+                                        ))}
+                                    </ul>
+                                </section>
+
+                                {studioCapabilities.length > 0 && (
+                                    <section>
+                                        <h4>Capabilities and Skills</h4>
+                                    <ul>
+                                        {studioCapabilities.map((capability) => (
+                                            <li key={capability.id}>
+                                                <h5>{capability.title}</h5>
+                                                <p>{capability.details}</p>
+                                                <p>Technologies: {capability.skills.join(', ')}.</p>
+                                                <button type="button" onClick={() => openOverlay(capability)}>
+                                                    Open {capability.title}
+                                                </button>
                                             </li>
                                         ))}
                                     </ul>
+                                    </section>
                                 )}
                             </div>
                         )}

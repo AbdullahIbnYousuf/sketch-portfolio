@@ -2,14 +2,13 @@ import { useRef, useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import gsap from 'gsap';
-import { CONTENT_DATA, PLATFORM_CONFIG, getLatestContent } from './contentData';
+import { CONTENT_DATA, PLATFORM_CONFIG, PROFILE_DATA } from './contentData';
 import { useScene } from '../../../../context/SceneContext';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { TextureLoader } from 'three';
 import FloatingCodeParticles from './FloatingCodeParticles';
 import { PositionalAudio, Text } from '@react-three/drei';
 import { useAudio } from '../../../../context/AudioManager';
-import { useStudioContent } from '../../../../hooks/useSanityData';
 import '../../shaders/RevealMaterial';
 import { isTouchDevice } from '../../../../utils/deviceDetect';
 import { usePaintMaterial } from '../Gallery/usePaintMaterial';
@@ -40,10 +39,9 @@ export const AUDIO_SETTINGS = {
 // ============================================
 // CONFIG - Adjust these values as needed
 // ============================================
-const CAMERA_Y_OFFSET = -6; // Negative = camera lower, Positive = camera higher
 const CAMERA_ZOOM_DISTANCE = 3; // Distance from monitor front when zoomed in
 const CAMERA_PAN_RIGHT = 1; // How far camera moves right after zoom (for content panel space)
-const TOWER_RADIUS = 2.2; // All monitors at same distance from center (smaller = narrower)
+const TOWER_RADIUS = 3.2; // Wide capability ring for the side-by-side Studio composition
 const MONITORS_PER_RING = 4; // How many monitors per vertical level
 const FALL_SPEED = 0.3; // How fast monitors fall down
 const TOWER_HEIGHT = 12; // Total visible height of tower
@@ -65,10 +63,17 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         return {
             zoomDistance: isMobile ? 2 : isTablet ? 3 : CAMERA_ZOOM_DISTANCE,
             panRight: isMobile ? 0 : isTablet ? 0.5 : Math.max(0.3, (size.width / 1920) * CAMERA_PAN_RIGHT),
-            panDown: isMobile ? 9.7 : 0, // Positive = camera DOWN = monitor at TOP
-            yOffset: isMobile ? 2.5 : isTablet ? -3 : CAMERA_Y_OFFSET,
-            towerRadius: isMobile ? 1.5 : (isTablet ? 1.8 : TOWER_RADIUS),
+            panDown: isMobile ? 0.75 : isTablet ? 0.25 : 0, // Keep the focused monitor above center on narrow screens
+            towerRadius: isMobile ? 1.85 : (isTablet ? 2.5 : TOWER_RADIUS),
+            towerPosition: isMobile
+                ? [0, TOWER_Y_START - 1.4, TOWER_Z_START]
+                : [isTablet ? 1.8 : 2.65, TOWER_Y_START, TOWER_Z_START],
+            dossierPosition: isMobile
+                ? [0, 2.4, -5.8]
+                : [isTablet ? -2.35 : -3.05, isTablet ? 2.3 : 2.15, -6.8],
+            dossierScale: isMobile ? 0.4 : isTablet ? 0.58 : 0.72,
             isMobile, // Pass through boolean
+            isTablet,
         };
     }, [size.width]);
 
@@ -84,7 +89,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Physics
     const rotationVelocity = useRef(0);
-    const autoRotationSpeed = useRef(0.12); // Now a ref to support changing direction
+    const autoRotationSpeed = useRef(0.12);
     const DRAG_SENSITIVITY = 0.008; // Increased from 0.005
     const FRICTION = 0.98; // Increased from 0.95 (longer spin)
 
@@ -107,9 +112,8 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     const { globalVolume, isMuted } = useAudio();
     const effectiveVolume = isMuted ? 0 : AUDIO_SETTINGS.volume * globalVolume;
 
-    // Pobieranie danych z Sanity.io (fallback do starych danych)
-    const sanityContent = useStudioContent();
-    const activeContent = sanityContent || CONTENT_DATA;
+    // The Studio is a local personal capability space, not an external content feed.
+    const activeContent = CONTENT_DATA;
 
     const audioRef = useRef();
     useEffect(() => {
@@ -152,11 +156,6 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         }
     }, [showRoom, isWarmup, isTeleporting]);
 
-    const latestContent = useMemo(() => {
-        if (!activeContent || activeContent.length === 0) return null;
-        return [...activeContent].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-    }, [activeContent]);
-
     // Monitor Y offsets for falling animation (mutable)
     const monitorOffsets = useRef([]);
     // Refs to monitor meshes for direct position updates (avoids 28 useFrame hooks)
@@ -192,16 +191,12 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     const monitorData = useMemo(() => {
         const items = [];
 
-        // Shuffle content for mixed appearance (seeded for consistency)
-        let shuffledContent = [...activeContent].sort(() => 0.5 - Math.random());
-        
-        // Ensure the tower is extremely tall (at least 12 rings = 48 items)
-        // so that the teleportation boundaries are far outside the camera's view.
-        if (shuffledContent.length > 0) {
-            while (shuffledContent.length < 48) {
-                shuffledContent = [...shuffledContent, ...[...activeContent].sort(() => 0.5 - Math.random())];
-            }
-        }
+        // Repeat the six capability groups in a stable order. Mobile uses half the
+        // meshes to keep the same visual language with a lighter GPU workload.
+        const targetCount = responsiveParams.isMobile ? 24 : 48;
+        const shuffledContent = activeContent.length > 0
+            ? Array.from({ length: targetCount }, (_, index) => activeContent[index % activeContent.length])
+            : [];
 
         // Calculate how many rings we need
         const totalMonitors = shuffledContent.length;
@@ -259,7 +254,6 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                     angle: angle,
                     rot: -angle + Math.PI / 2,
                     platformConfig: platform,
-                    isLatest: latestContent ? contentItem.id === latestContent.id : false,
                 });
 
                 contentIndex++;
@@ -276,7 +270,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         const totalHeight = Math.max(VERTICAL_SPACING * 3, maxBaseY - minBaseY + VERTICAL_SPACING);
 
         return { items, totalHeight };
-    }, [latestContent?.id, responsiveParams.towerRadius, activeContent]);
+    }, [responsiveParams.towerRadius, responsiveParams.isMobile, activeContent]);
 
     // Destructure for easier access
     const monitors = monitorData.items;
@@ -287,7 +281,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // --- INTERACTION ---
     const handlePointerDown = (e) => {
-        if (isAnimating) return;
+        if (isAnimating || overlayContent) return;
         // e.preventDefault(); // Might block scroll, good for custom drag
         e.stopPropagation(); // Stop bubbling
 
@@ -307,7 +301,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, []);
 
     const handlePointerMove = useCallback((e) => {
-        if (!isDraggingRef.current || !towerRef.current || isAnimating) return;
+        if (!isDraggingRef.current || !towerRef.current || isAnimating || overlayContent) return;
 
         const clientX = e.clientX || (e.touches && e.touches[0]?.clientX);
         const clientY = e.clientY || (e.touches && e.touches[0]?.clientY);
@@ -333,11 +327,12 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         fallSpeed.current += deltaY * SWIPE_SENSITIVITY;
 
         unlockAchievement('studio_interact');
-    }, [isAnimating, unlockAchievement]);
+    }, [isAnimating, overlayContent, unlockAchievement]);
 
     // Wheel Listener for Desktop
     useEffect(() => {
         const handleWheel = (e) => {
+            if (overlayContent) return;
             // e.deltaY > 0 means scroll DOWN.
             // Scroll DOWN -> Monitors go DOWN (Speed +).
             // Scroll UP -> Monitors go UP (Speed -).
@@ -347,7 +342,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
         window.addEventListener('wheel', handleWheel);
         return () => window.removeEventListener('wheel', handleWheel);
-    }, [unlockAchievement]);
+    }, [overlayContent, unlockAchievement]);
 
     // Global Event Listeners for seamless drag
     useEffect(() => {
@@ -376,15 +371,25 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
         unlockAchievement('studio_interact');
 
-        // Monitor's facing rotation (item.rot = -angle + PI/2)
-        // Monitor's screen faces local +Z, rotated by item.rot
-        // Tower rotated by towerRotation
-        // World facing = item.rot + towerRotation
-        // We want world facing = 0 (toward camera at +Z)
-        // So: towerRotation = -item.rot
+        // The Studio is nested inside the rotated corridor door. Convert the
+        // camera-facing direction into the tower parent's local space before
+        // choosing the cylinder rotation; otherwise the selected screen can
+        // turn its back to the camera after the room is transformed.
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
 
-        const monitorFacingRotation = item.rot;
-        let targetRotation = -monitorFacingRotation;
+        towerRef.current.parent?.updateWorldMatrix(true, false);
+        const parentWorldQuaternion = new THREE.Quaternion();
+        towerRef.current.parent?.getWorldQuaternion(parentWorldQuaternion);
+        const desiredLocalFacing = forward
+            .clone()
+            .negate()
+            .applyQuaternion(parentWorldQuaternion.invert());
+        desiredLocalFacing.y = 0;
+        desiredLocalFacing.normalize();
+
+        const desiredFacingRotation = Math.atan2(desiredLocalFacing.x, desiredLocalFacing.z);
+        let targetRotation = desiredFacingRotation - item.rot;
 
         // Normalize current rotation
         let currentRotation = towerRef.current.rotation.y % (Math.PI * 2);
@@ -409,48 +414,34 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             duration: 0.8,
             ease: 'power2.inOut',
             onComplete: () => {
-                // STEP 2: After rotation, move camera Y to center on monitor
-                // Store original camera Y if not stored
-                if (originalCameraY.current === null) {
-                    originalCameraY.current = camera.position.y;
-                }
-
-                // Monitor's world Y position
-                // Group is at y=-1.2, tower at y=0 relative to group
-                // Monitor's current Y = baseY + offset
-                const monitorCurrentY = item.baseY + (monitorOffsets.current[item.index] || 0);
-                const monitorWorldY = -1.2 + monitorCurrentY + responsiveParams.yOffset;
-
-                // STEP 3: Move camera FORWARD (in the direction it's looking)
-                // Store original camera position if not stored
+                // Store the exact room camera position for the close/reset path.
                 if (originalCameraZ.current === null) {
                     originalCameraZ.current = camera.position.z;
                     originalCameraX.current = camera.position.x;
+                    originalCameraY.current = camera.position.y;
                 }
 
-                // Get camera's forward direction
-                const forward = new THREE.Vector3();
-                camera.getWorldDirection(forward);
-
-                // Get camera's right direction (cross product of forward and up)
+                // Build a camera target from the selected monitor's real world
+                // position. This remains correct after shifting the cylinder or
+                // rotating/translating the surrounding corridor room.
                 const up = new THREE.Vector3(0, 1, 0);
                 const right = new THREE.Vector3();
                 right.crossVectors(forward, up).normalize();
 
-                // STEP 3 & 4: Move camera forward + right/down (using responsive values)
-                const zoomDist = responsiveParams.zoomDistance;
-                const panRight = responsiveParams.panRight;
-                const panDown = responsiveParams.panDown;
+                towerRef.current.updateWorldMatrix(true, true);
+                const selectedWorldPosition = new THREE.Vector3();
+                monitorRefs.current[item.index]?.getWorldPosition(selectedWorldPosition);
 
-                const targetX = camera.position.x + forward.x * zoomDist + right.x * panRight;
-                const targetZ = camera.position.z + forward.z * zoomDist + right.z * panRight;
-                const targetY = monitorWorldY - panDown; // Pan down moves camera down = monitor at top
-
+                const targetPosition = selectedWorldPosition
+                    .clone()
+                    .addScaledVector(forward, -responsiveParams.zoomDistance)
+                    .addScaledVector(right, responsiveParams.panRight);
+                targetPosition.y -= responsiveParams.panDown;
 
                 gsap.to(camera.position, {
-                    x: targetX,
-                    y: targetY,
-                    z: targetZ,
+                    x: targetPosition.x,
+                    y: targetPosition.y,
+                    z: targetPosition.z,
                     duration: 0.5,
                     ease: 'power2.inOut',
                     onComplete: () => {
@@ -461,7 +452,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             }
         });
 
-    }, [isAnimating, camera, responsiveParams, openOverlay]);
+    }, [isAnimating, camera, responsiveParams, openOverlay, unlockAchievement]);
 
     // Trigger camera return ONLY when overlay is explicitly closed
     // We use a ref to track if overlay was previously open to avoid initial race conditions
@@ -505,7 +496,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         if (!towerRef.current) return;
 
         // Auto-rotate and Physics when idle
-        if (!isDraggingRef.current && !isAnimating && !selectedMonitor) {
+        if (!isDraggingRef.current && !isAnimating && !selectedMonitor && !overlayContent) {
             towerRef.current.rotation.y += autoRotationSpeed.current * delta + rotationVelocity.current;
             rotationVelocity.current *= FRICTION;
 
@@ -564,7 +555,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             {/* THE INFINITE TOWER */}
             <group
                 ref={towerRef}
-                position={[0, TOWER_Y_START, TOWER_Z_START]}
+                position={responsiveParams.towerPosition}
                 onPointerDown={handlePointerDown}
             >
                 {/* Invisible Hit Cylinder for easier drag interaction */}
@@ -579,7 +570,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                         item={item}
                         index={index}
                         meshRef={(el) => { monitorRefs.current[index] = el; }}
-                        isSelected={selectedMonitor?.id === item.id}
+                        isSelected={selectedMonitor?.index === item.index}
                         onMonitorClick={handleMonitorClick}
                         disabled={isAnimating}
                         paintOnBeforeCompile={paintOnBeforeCompile}
@@ -588,12 +579,224 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 ))}
             </group>
 
+            <DossierBoard
+                position={responsiveParams.dossierPosition}
+                scale={responsiveParams.dossierScale}
+                disabled={isAnimating || Boolean(overlayContent) || isWarmup}
+                onOpen={() => openOverlay(PROFILE_DATA)}
+            />
+
             {/* Floating code symbols parallax background */}
             <FloatingCodeParticles
                 towerRotationRef={particleTowerRotation}
                 fallOffsetRef={particleFallOffset}
             />
         </group>
+    );
+};
+
+// ===========================================
+// DOSSIER BOARD - floating investigation collage beside the capability tower
+// ===========================================
+const DossierBoard = ({ position, scale, disabled, onOpen }) => {
+    const avatarSource = useLoader(TextureLoader, '/textures/about/awatarnachmurce.webp');
+    const paperSource = useLoader(TextureLoader, '/textures/paper-texture.webp');
+    const statusLightRef = useRef();
+
+    const avatarTexture = useMemo(() => {
+        const croppedTexture = avatarSource.clone();
+        croppedTexture.colorSpace = THREE.SRGBColorSpace;
+        croppedTexture.wrapS = THREE.ClampToEdgeWrapping;
+        croppedTexture.wrapT = THREE.ClampToEdgeWrapping;
+        // Crop the existing full-body illustration into a passport-style portrait.
+        croppedTexture.repeat.set(0.15, 0.34);
+        croppedTexture.offset.set(0.425, 0.55);
+        croppedTexture.needsUpdate = true;
+        return croppedTexture;
+    }, [avatarSource]);
+
+    const paperTexture = useMemo(() => {
+        const texture = paperSource.clone();
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.needsUpdate = true;
+        return texture;
+    }, [paperSource]);
+
+    useEffect(() => () => {
+        avatarTexture.dispose();
+        paperTexture.dispose();
+    }, [avatarTexture, paperTexture]);
+
+    useFrame(({ clock }) => {
+        const elapsed = clock.getElapsedTime();
+        if (statusLightRef.current) {
+            statusLightRef.current.material.opacity = 0.55 + Math.sin(elapsed * 3.4) * 0.35;
+        }
+    });
+
+    const handleOpen = (event) => {
+        event.stopPropagation();
+        if (!disabled) onOpen();
+    };
+
+    return (
+        <group
+            position={position}
+            scale={scale}
+            onClick={handleOpen}
+            onPointerOver={(event) => {
+                event.stopPropagation();
+                if (!disabled) document.body.style.cursor = 'pointer';
+            }}
+            onPointerOut={() => {
+                document.body.style.cursor = 'auto';
+            }}
+        >
+            {/* Cyan evidence threads sit behind the pinned notes. */}
+            <EvidenceLine from={[-0.08, 0.42]} to={[-0.12, 0.34]} />
+            <EvidenceLine from={[-0.05, -0.28]} to={[0.08, -0.38]} />
+            <EvidenceLine from={[0.08, -1.3]} to={[-0.08, -1.46]} />
+
+            {/* Paper strip identifying the investigation board. */}
+            <group position={[0, 2.15, 0]} rotation={[0, 0, -0.015]}>
+                <mesh position={[0.04, -0.035, 0.18]} renderOrder={5}>
+                    <planeGeometry args={[2.85, 0.34]} />
+                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.14} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0, 0.2]} renderOrder={6}>
+                    <planeGeometry args={[2.85, 0.34]} />
+                    <meshBasicMaterial color="#f6efda" map={paperTexture} depthWrite={false} />
+                </mesh>
+                <Text position={[-1.27, 0, 0.23]} fontSize={0.105} color="#1a1a1a" anchorX="left" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
+                    SUBJECT FILE // AIY-01
+                </Text>
+                <Text position={[1.05, 0, 0.23]} fontSize={0.09} color="#087f91" anchorX="right" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
+                    ACTIVE
+                </Text>
+                <mesh ref={statusLightRef} position={[1.2, 0, 0.24]} renderOrder={9}>
+                    <circleGeometry args={[0.055, 20]} />
+                    <meshBasicMaterial color="#00d9ff" transparent opacity={0.9} depthWrite={false} />
+                </mesh>
+            </group>
+
+            {/* Passport portrait pinned to its own paper card. */}
+            <group position={[0, 1.22, 0]} rotation={[0, 0, -0.045]}>
+                <mesh position={[0.055, -0.055, 0.18]} renderOrder={5}>
+                    <planeGeometry args={[1.55, 1.7]} />
+                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0, 0.2]} renderOrder={6}>
+                    <planeGeometry args={[1.55, 1.7]} />
+                    <meshBasicMaterial color="#f8f2df" map={paperTexture} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0.1, 0.225]} renderOrder={7}>
+                    <planeGeometry args={[1.03, 1.22]} />
+                    <meshBasicMaterial color="#d6ecea" />
+                </mesh>
+                <mesh position={[0, 0.1, 0.235]} renderOrder={8}>
+                    <planeGeometry args={[0.93, 1.15]} />
+                    <meshBasicMaterial map={avatarTexture} transparent depthWrite={false} side={THREE.DoubleSide} />
+                </mesh>
+                <Text position={[0, -0.68, 0.235]} fontSize={0.105} color="#1a1a1a" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
+                    PHOTO // MATCH 98%
+                </Text>
+                <mesh position={[0, 0.8, 0.25]} renderOrder={9}>
+                    <circleGeometry args={[0.075, 24]} />
+                    <meshBasicMaterial color="#00a9bf" depthWrite={false} />
+                </mesh>
+            </group>
+
+            {/* Separate pinned identity slip. */}
+            <group position={[-0.12, 0.02, 0]} rotation={[0, 0, 0.025]}>
+                <mesh position={[0.045, -0.045, 0.18]} renderOrder={5}>
+                    <planeGeometry args={[2.82, 0.84]} />
+                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0, 0.2]} renderOrder={6}>
+                    <planeGeometry args={[2.82, 0.84]} />
+                    <meshBasicMaterial color="#fcf3c6" map={paperTexture} depthWrite={false} />
+                </mesh>
+                <Text position={[-1.2, 0.22, 0.235]} fontSize={0.085} color="#087f91" anchorX="left" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
+                    IDENTITY CONFIRMED
+                </Text>
+                <Text position={[-1.2, -0.1, 0.235]} fontSize={0.215} color="#1a1a1a" anchorX="left" anchorY="middle" maxWidth={2.45} font="/fonts/RubikScribble-Regular.ttf" renderOrder={8}>
+                    ABDULLAH IBN YOUSUF
+                </Text>
+                <mesh position={[1.14, 0.28, 0.25]} renderOrder={9}>
+                    <circleGeometry args={[0.065, 24]} />
+                    <meshBasicMaterial color="#00a9bf" depthWrite={false} />
+                </mesh>
+            </group>
+
+            {/* Role and short biography gathered on a second note. */}
+            <group position={[0.08, -0.88, 0]} rotation={[0, 0, -0.018]}>
+                <mesh position={[0.05, -0.045, 0.18]} renderOrder={5}>
+                    <planeGeometry args={[3, 1.02]} />
+                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0, 0.2]} renderOrder={6}>
+                    <planeGeometry args={[3, 1.02]} />
+                    <meshBasicMaterial color="#f5eed8" map={paperTexture} depthWrite={false} />
+                </mesh>
+                <Text position={[-1.3, 0.29, 0.235]} fontSize={0.12} color="#1a1a1a" anchorX="left" anchorY="middle" maxWidth={2.6} font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
+                    CSE STUDENT · SOFTWARE & AI DEVELOPER
+                </Text>
+                <Text position={[-1.3, 0.02, 0.235]} fontSize={0.095} color="#34484b" anchorX="left" anchorY="top" maxWidth={2.6} lineHeight={1.22} font="/fonts/CabinSketch-Regular.ttf" renderOrder={8}>
+                    {'Builds practical products, backend systems,\nand AI-assisted applications for real problems.'}
+                </Text>
+                <mesh position={[-1.2, 0.43, 0.25]} renderOrder={9}>
+                    <circleGeometry args={[0.06, 24]} />
+                    <meshBasicMaterial color="#00a9bf" depthWrite={false} />
+                </mesh>
+            </group>
+
+            {/* Location and availability clipped along the bottom. */}
+            <group position={[-0.08, -1.68, 0]} rotation={[0, 0, 0.018]}>
+                <mesh position={[0.04, -0.035, 0.18]} renderOrder={5}>
+                    <planeGeometry args={[2.92, 0.5]} />
+                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.15} depthWrite={false} />
+                </mesh>
+                <mesh position={[0, 0, 0.2]} renderOrder={6}>
+                    <planeGeometry args={[2.92, 0.5]} />
+                    <meshBasicMaterial color="#eaf5ef" map={paperTexture} depthWrite={false} />
+                </mesh>
+                <Text position={[-1.24, 0, 0.235]} fontSize={0.095} color="#1a1a1a" anchorX="left" anchorY="middle" maxWidth={2.48} font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
+                    GAZIPUR · IUT CSE · OPEN TO OPPORTUNITIES
+                </Text>
+            </group>
+
+            <mesh position={[0.35, -2.1, 0.22]} rotation={[0, 0, -0.02]} renderOrder={7}>
+                <planeGeometry args={[1.5, 0.3]} />
+                <meshBasicMaterial color="#9fe8ef" map={paperTexture} depthWrite={false} />
+            </mesh>
+            <Text position={[0.35, -2.1, 0.25]} fontSize={0.115} color="#1a1a1a" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={9}>
+                OPEN FULL FILE →
+            </Text>
+
+            {/* Wide transparent hit target makes the whole dossier collage clickable. */}
+            <mesh position={[0, 0.05, 0.3]} renderOrder={10}>
+                <planeGeometry args={[3.35, 4.7]} />
+                <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
+            </mesh>
+        </group>
+    );
+};
+
+const EvidenceLine = ({ from, to }) => {
+    const deltaX = to[0] - from[0];
+    const deltaY = to[1] - from[1];
+    const length = Math.hypot(deltaX, deltaY);
+    const angle = Math.atan2(deltaY, deltaX);
+
+    return (
+        <mesh
+            position={[(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, 0.185]}
+            rotation={[0, 0, angle]}
+            renderOrder={5}
+        >
+            <planeGeometry args={[length, 0.025]} />
+            <meshBasicMaterial color="#00a9bf" transparent opacity={0.65} depthWrite={false} />
+        </mesh>
     );
 };
 
@@ -716,20 +919,13 @@ const MonitorBlock = memo(({ item, meshRef, isSelected, onMonitorClick, disabled
     const paintedMaterials = useMemo(() => {
         if (!faceConfig) return null;
         return faceConfig.map(f => {
-            const mat = new THREE.MeshBasicMaterial({
+            return new THREE.MeshBasicMaterial({
                 color: '#fcf3c6',
-                map: f.painted || f.sketch // Use sketch as fallback if no painted version
+                map: f.painted || f.sketch, // Use sketch as fallback if no painted version
+                transparent: true,
             });
-            // Apply paint transition shader
-            if (paintOnBeforeCompile) {
-                mat.onBeforeCompile = paintOnBeforeCompile;
-                mat.customProgramCacheKey = () => 'paintOnBeforeCompile_studio_painted';
-                mat.transparent = true;
-                mat.needsUpdate = true;
-            }
-            return mat;
         });
-    }, [faceConfig, paintOnBeforeCompile]);
+    }, [faceConfig]);
 
     // Sketch materials for outer box (standard materials, used for faces WITHOUT reveal)
     const sketchMaterials = useMemo(() => {
@@ -948,21 +1144,49 @@ const ScreenTextDetails = ({ item }) => {
             </Text>
 
             <Text
-                position={[-item.width * 0.44, -item.height * 0.16, 0]}
-                fontSize={item.width * 0.042}
+                position={[-item.width * 0.44, -item.height * 0.08, 0]}
+                fontSize={item.width * 0.037}
                 color="#1a1a1a"
                 anchorX="left"
                 anchorY="top"
-                maxWidth={item.width * 0.54}
-                maxLines={3}
+                maxWidth={item.width * 0.82}
+                maxLines={2}
                 font="/fonts/CabinSketch-Regular.ttf"
                 lineHeight={1.2}
             >
                 {item.description}
+            </Text>
+
+            <Text
+                position={[0, -item.height * 0.34, 0.002]}
+                fontSize={item.width * 0.035}
+                color="#1a1a1a"
+                anchorX="center"
+                anchorY="middle"
+                maxWidth={item.width * 0.82}
+                maxLines={1}
+                font="/fonts/CabinSketch-Bold.ttf"
+            >
+                {item.skills?.slice(0, 3).join(' · ')}
+            </Text>
+
+            {/* Covers the original template-owner mark on the monitor bezel. */}
+            <mesh position={[0, -item.height * 0.465, -0.001]}>
+                <planeGeometry args={[item.width * 0.42, item.height * 0.085]} />
+                <meshBasicMaterial color="#fcf3c6" />
+            </mesh>
+            <Text
+                position={[0, -item.height * 0.465, 0.002]}
+                fontSize={item.width * 0.032}
+                color="#1a1a1a"
+                anchorX="center"
+                anchorY="middle"
+                font="/fonts/CabinSketch-Bold.ttf"
+            >
+                ABDULLAH
             </Text>
         </group>
     );
 };
 
 export default StudioRoom;
-
