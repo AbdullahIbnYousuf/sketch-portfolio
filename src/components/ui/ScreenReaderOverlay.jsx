@@ -1,6 +1,7 @@
 import { useScene } from '../../context/SceneContext';
 import { useGalleryProjects, useAwards } from '../../hooks/useSanityData';
 import { CONTENT_DATA as studioCapabilities, PROFILE_DATA } from '../canvas/rooms/Studio/contentData';
+import { STUDIO_SKILL_BALLOONS } from '../canvas/rooms/Studio/skillBalloonData';
 import '../../styles/ScreenReaderOverlay.scss';
 
 /**
@@ -39,7 +40,7 @@ const ScreenReaderOverlay = () => {
                         <ul>
                             <li>
                                 <button onClick={() => teleportTo('about')} type="button">
-                                    About — My story, skills, and journey
+                                    About — My story, achievements, and journey
                                 </button>
                             </li>
                             <li>
@@ -77,7 +78,7 @@ const ScreenReaderOverlay = () => {
                         {currentRoom === 'about' && (
                             <div aria-label="About room content">
                                 <h3>About Me</h3>
-                                <p>This room contains my personal story, capabilities, journey milestones, and technology skills displayed as interactive balloons.</p>
+                                <p>This room contains my personal story, achievements, and journey milestones.</p>
                                 
                                 {awards && (
                                     <section>
@@ -168,6 +169,16 @@ const ScreenReaderOverlay = () => {
                                     </ul>
                                     </section>
                                 )}
+
+                                <section>
+                                    <h4>Interactive Skill Balloons</h4>
+                                    <p>Ten skill balloons rotate between the capability monitors. Activating a balloon reveals its technology name.</p>
+                                    <ul>
+                                        {STUDIO_SKILL_BALLOONS.map((balloon) => (
+                                            <li key={balloon.label}>{balloon.label}</li>
+                                        ))}
+                                    </ul>
+                                </section>
                             </div>
                         )}
 

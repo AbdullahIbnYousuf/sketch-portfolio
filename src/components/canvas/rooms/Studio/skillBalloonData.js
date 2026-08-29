@@ -1,0 +1,73 @@
+export const STUDIO_SKILL_BALLOONS = [
+    {
+        texture: '/textures/about/reactduzybalon.webp',
+        paintedTexture: '/textures/about/reactduzybalon_painted.webp',
+        label: 'React',
+        size: 'large',
+        phase: 0,
+    },
+    {
+        texture: '/textures/about/threejsduzybalon.webp',
+        paintedTexture: '/textures/about/threejsduzybalon_painted.webp',
+        label: 'TypeScript',
+        size: 'large',
+        phase: 1.5,
+    },
+    {
+        texture: '/textures/about/GSAPduzybalon.webp',
+        paintedTexture: '/textures/about/GSAPduzybalon_painted.webp',
+        label: 'Python',
+        size: 'large',
+        phase: 3,
+    },
+    {
+        texture: '/textures/about/JSSREDNIBALON.webp',
+        paintedTexture: '/textures/about/JSSREDNIBALON_painted.webp',
+        label: 'Node.js',
+        size: 'medium',
+        phase: 0.8,
+    },
+    {
+        texture: '/textures/about/csssrednibalon.webp',
+        paintedTexture: '/textures/about/csssrednibalon_painted.webp',
+        label: 'FastAPI',
+        size: 'medium',
+        phase: 2.2,
+    },
+    {
+        texture: '/textures/about/nextjssrednibalon.webp',
+        paintedTexture: '/textures/about/nextjssrednibalon_painted.webp',
+        label: 'Next.js',
+        size: 'medium',
+        phase: 4,
+    },
+    {
+        texture: '/textures/about/htmlmalybalon.webp',
+        paintedTexture: '/textures/about/htmlmalybalon_painted.webp',
+        label: 'PostgreSQL',
+        size: 'small',
+        phase: 1.2,
+    },
+    {
+        texture: '/textures/about/gitmalybalon.webp',
+        paintedTexture: '/textures/about/gitmalybalon_painted.webp',
+        label: 'Git & GitHub',
+        size: 'small',
+        phase: 2.8,
+    },
+    {
+        texture: '/textures/about/figmamalybalon.webp',
+        paintedTexture: '/textures/about/figmamalybalon_painted.webp',
+        label: 'REST APIs',
+        size: 'small',
+        phase: 3.5,
+    },
+    {
+        texture: '/textures/about/firebasemalybalon.webp',
+        paintedTexture: '/textures/about/firebasemalybalon_painted.webp',
+        label: 'RAG Workflows',
+        size: 'small',
+        phase: 4.5,
+    },
+];
+

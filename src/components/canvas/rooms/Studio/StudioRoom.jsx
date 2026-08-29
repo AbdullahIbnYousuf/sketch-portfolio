@@ -7,6 +7,8 @@ import { useScene } from '../../../../context/SceneContext';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { TextureLoader } from 'three';
 import FloatingCodeParticles from './FloatingCodeParticles';
+import StudioSkillBalloon from './StudioSkillBalloon';
+import { STUDIO_SKILL_BALLOONS } from './skillBalloonData';
 import { PositionalAudio, Text } from '@react-three/drei';
 import { useAudio } from '../../../../context/AudioManager';
 import '../../shaders/RevealMaterial';
@@ -160,6 +162,8 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     const monitorOffsets = useRef([]);
     // Refs to monitor meshes for direct position updates (avoids 28 useFrame hooks)
     const monitorRefs = useRef([]);
+    const balloonOffsets = useRef([]);
+    const balloonRefs = useRef([]);
 
     // Track tower state for floating particles parallax (REFS not state!)
     const particleTowerRotation = useRef(0);
@@ -275,6 +279,35 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // Destructure for easier access
     const monitors = monitorData.items;
     const totalHeight = monitorData.totalHeight;
+
+    // Place one unique skill balloon in the angular and vertical gaps between
+    // monitor rows. Both object types remain children of the same tower, so the
+    // balloons inherit its rotation and drag inertia automatically.
+    const balloons = useMemo(() => {
+        const ringCount = responsiveParams.isMobile ? 6 : 12;
+        const angleStep = (Math.PI * 2) / MONITORS_PER_RING;
+        const items = STUDIO_SKILL_BALLOONS.map((balloon, index) => {
+            const ring = index % ringCount;
+            const gapIndex = index % MONITORS_PER_RING;
+            const monitorAngleOffset = ring % 2 === 0 ? 0 : angleStep / 2;
+            const angle = gapIndex * angleStep + monitorAngleOffset + angleStep / 2;
+            const radius = responsiveParams.towerRadius;
+
+            return {
+                ...balloon,
+                id: `studio-skill-balloon-${index}`,
+                index,
+                x: Math.cos(angle) * radius,
+                baseY: ring * VERTICAL_SPACING + VERTICAL_SPACING / 2,
+                z: Math.sin(angle) * radius,
+                angle,
+                rot: -angle + Math.PI / 2,
+            };
+        });
+
+        balloonOffsets.current = items.map(() => 0);
+        return items;
+    }, [responsiveParams.isMobile, responsiveParams.towerRadius]);
 
     // Need a ref for lastY too
     const lastYRef = useRef(0);
@@ -531,6 +564,24 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 }
             });
 
+            // Balloons use the exact same vertical velocity and wrap boundaries
+            // as the monitors while keeping their own local hover/pop animation.
+            balloons.forEach((balloon, index) => {
+                balloonOffsets.current[index] -= fallSpeed.current * delta;
+
+                const currentY = balloon.baseY + balloonOffsets.current[index];
+                if (currentY < -10.0 && fallSpeed.current > 0) {
+                    balloonOffsets.current[index] += totalHeight;
+                } else if (currentY > totalHeight - 10.0 && fallSpeed.current < 0) {
+                    balloonOffsets.current[index] -= totalHeight;
+                }
+
+                const ref = balloonRefs.current[index];
+                if (ref) {
+                    ref.position.y = balloon.baseY + balloonOffsets.current[index];
+                }
+            });
+
             // Update particle refs directly (no setState = no re-render = smooth!)
             particleTowerRotation.current = towerRef.current.rotation.y;
             particleFallOffset.current = fallSpeed.current; // Pass velocity, not offset!
@@ -575,6 +626,17 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                         disabled={isAnimating}
                         paintOnBeforeCompile={paintOnBeforeCompile}
                         paintUniforms={paintUniforms}
+                    />
+                ))}
+
+                {balloons.map((item, index) => (
+                    <StudioSkillBalloon
+                        key={item.id}
+                        item={item}
+                        meshRef={(element) => { balloonRefs.current[index] = element; }}
+                        disabled={isAnimating || Boolean(overlayContent) || isWarmup}
+                        dragDistanceRef={dragDistance}
+                        onInteract={() => unlockAchievement('studio_interact')}
                     />
                 ))}
             </group>

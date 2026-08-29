@@ -28,7 +28,6 @@ const STORY_MILESTONES = [
     { id: 'intro', position: [0, 0, -15], type: 'intro', title: 'ABDULLAH IBN YOUSUF', subtitle: '< computer science student • software & AI developer />' },
     { id: 'focus', position: [0, 0, -55], type: 'awards', title: 'ACHIEVEMENTS', subtitle: 'Hackathons • Practical Products • Technical Growth' },
     { id: 'journey', position: [0, 0, -95], type: 'journey', title: 'JOURNEY', subtitle: 'Student • Machine Learning Intern • Founder • Freelancer' },
-    { id: 'skills', position: [0, 0, -135], type: 'skills', title: 'SKILLS', subtitle: 'TypeScript • Python • React • FastAPI • PostgreSQL • AI Workflows' },
 ];
 
 const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
