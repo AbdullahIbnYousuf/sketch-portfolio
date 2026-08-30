@@ -4,8 +4,6 @@ An immersive, hand-drawn 3D portfolio for Abdullah Ibn Yousuf, a Computer Scienc
 
 The website presents projects, education, experience, achievements, technical capabilities, and contact information as an explorable paper-and-pencil world rather than a conventional portfolio page.
 
-![Portfolio preview](./public/og-image.webp)
-
 ## Experience
 
 The portfolio begins at a sketch-style entrance and continues into an infinite corridor connecting four interactive rooms.
@@ -174,6 +172,10 @@ The portfolio includes an accessible navigation layer for users who cannot inter
 
 Rendering quality adapts to device capability, and mobile layouts use reduced object counts and touch-friendly controls where appropriate. Because the experience loads many textures and audio files, the first visit can take longer on slower connections.
 
+## Credits
+
+This portfolio is inspired from **ITOM**, the creative developer.
+
 ## Contact
 
 - Email: [abdullahibnyousuf@outlook.com](mailto:abdullahibnyousuf@outlook.com)
@@ -181,6 +183,3 @@ Rendering quality adapts to device capability, and mobile layouts use reduced ob
 - LinkedIn: [abdullahibnyousuf](https://www.linkedin.com/in/abdullahibnyousuf/)
 - Facebook: [AAbdullahIbnYousuf](https://www.facebook.com/AAbdullahIbnYousuf)
 
-## Credits
-
-This portfolio is personalized and extended for Abdullah Ibn Yousuf. The original project and creative direction belong to **ITOM**, the creative developer behind the [ITOMdev portfolio](https://itomdev.com/).
