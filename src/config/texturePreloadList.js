@@ -195,9 +195,10 @@ export const ABOUT_TEXTURES = [
     '/textures/about/SOTDAYYOUNGMULTIGSAP.webp',
     '/textures/about/SOTDAYYOUNGMULTIORPETRON.webp',
     '/textures/about/SOTDAYYOUNGMULTIDESIGNNOMINESS.webp',
-    // Journey islands
-    '/textures/about/uowyspa.webp',
-    '/textures/about/freelancewyspa.webp',
+    // Journey education island and experience balloons (black-and-white versions are active)
+    '/textures/about/journey_education_island_bw.png',
+    '/textures/about/journey_balloon_left_bw.png',
+    '/textures/about/journey_balloon_right_bw.png',
     // Skill balloons - large
     '/textures/about/reactduzybalon.webp',
     '/textures/about/reactduzybalon_painted.webp',

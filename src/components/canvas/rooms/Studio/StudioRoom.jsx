@@ -14,6 +14,7 @@ import { useAudio } from '../../../../context/AudioManager';
 import '../../shaders/RevealMaterial';
 import { isTouchDevice } from '../../../../utils/deviceDetect';
 import { usePaintMaterial } from '../Gallery/usePaintMaterial';
+import { getFramedCameraPosition } from '../../../../utils/cameraFraming';
 
 // ============================================
 // ⚙️ PAINT CONFIGURATION - TWEAK HERE (Skąd-Dokąd)
@@ -104,6 +105,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Content State
     const [selectedMonitor, setSelectedMonitor] = useState(null);
+    const [isDossierFocused, setIsDossierFocused] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
 
     // Global Scene Context for Overlay
@@ -487,19 +489,62 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     }, [isAnimating, camera, responsiveParams, openOverlay, unlockAchievement]);
 
+    const handleDossierOpen = useCallback(({ overlayFocus, cameraFocus }) => {
+        if (isAnimating || overlayContent) return;
+
+        if (originalCameraZ.current === null) {
+            originalCameraZ.current = camera.position.z;
+            originalCameraX.current = camera.position.x;
+            originalCameraY.current = camera.position.y;
+        }
+
+        const focusPosition = new THREE.Vector3(...cameraFocus);
+        const targetFocus = responsiveParams.isMobile
+            ? { x: 0.5, y: 0.3 }
+            : { x: 0.29, y: THREE.MathUtils.clamp(overlayFocus.y, 0.32, 0.68) };
+        const targetPosition = getFramedCameraPosition({
+            camera,
+            focusWorld: focusPosition,
+            screenX: targetFocus.x,
+            screenY: targetFocus.y,
+            dollyRatio: 0.035,
+            maxDolly: 0.45,
+        });
+
+        setIsAnimating(true);
+        gsap.killTweensOf(camera.position);
+        gsap.to(camera.position, {
+            x: targetPosition.x,
+            y: targetPosition.y,
+            z: targetPosition.z,
+            duration: 0.65,
+            ease: 'power2.out',
+            overwrite: true,
+            onComplete: () => {
+                setIsDossierFocused(true);
+                setIsAnimating(false);
+                openOverlay({
+                    ...PROFILE_DATA,
+                    overlayFocus: targetFocus,
+                    overlaySide: 'right',
+                });
+            },
+        });
+    }, [camera, isAnimating, openOverlay, overlayContent, responsiveParams.isMobile]);
+
     // Trigger camera return ONLY when overlay is explicitly closed
     // We use a ref to track if overlay was previously open to avoid initial race conditions
     const prevOverlayContent = useRef(null);
 
     useEffect(() => {
         // If it WAS open (prev) and is NOW closed (null) AND we are viewing a monitor -> Return camera
-        if (prevOverlayContent.current && !overlayContent && selectedMonitor && !isAnimating) {
+        if (prevOverlayContent.current && !overlayContent && (selectedMonitor || isDossierFocused) && !isAnimating) {
             handleReturnCamera();
         }
 
         // Update ref for next render
         prevOverlayContent.current = overlayContent;
-    }, [overlayContent, selectedMonitor, isAnimating]);
+    }, [overlayContent, selectedMonitor, isDossierFocused, isAnimating]);
 
     const handleReturnCamera = useCallback(() => {
         setIsAnimating(true);
@@ -515,11 +560,13 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 onComplete: () => {
                     setIsAnimating(false);
                     setSelectedMonitor(null); // Resume auto-rotation
+                    setIsDossierFocused(false);
                 }
             });
         } else {
             setIsAnimating(false);
             setSelectedMonitor(null);
+            setIsDossierFocused(false);
         }
     }, [camera]);
 
@@ -645,7 +692,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 position={responsiveParams.dossierPosition}
                 scale={responsiveParams.dossierScale}
                 disabled={isAnimating || Boolean(overlayContent) || isWarmup}
-                onOpen={() => openOverlay(PROFILE_DATA)}
+                onOpen={handleDossierOpen}
             />
 
             {/* Floating code symbols parallax background */}
@@ -661,6 +708,8 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 // DOSSIER BOARD - floating investigation collage beside the capability tower
 // ===========================================
 const DossierBoard = ({ position, scale, disabled, onOpen }) => {
+    const { camera } = useThree();
+    const dossierRef = useRef();
     const avatarSource = useLoader(TextureLoader, '/textures/about/awatarnachmurce.webp');
     const paperSource = useLoader(TextureLoader, '/textures/paper-texture.webp');
     const statusLightRef = useRef();
@@ -698,11 +747,25 @@ const DossierBoard = ({ position, scale, disabled, onOpen }) => {
 
     const handleOpen = (event) => {
         event.stopPropagation();
-        if (!disabled) onOpen();
+        if (disabled || !dossierRef.current) return;
+
+        dossierRef.current.updateWorldMatrix(true, false);
+        const worldPosition = new THREE.Vector3();
+        dossierRef.current.getWorldPosition(worldPosition);
+        const projected = worldPosition.clone().project(camera);
+
+        onOpen({
+            overlayFocus: {
+                x: THREE.MathUtils.clamp((projected.x + 1) / 2, 0.06, 0.94),
+                y: THREE.MathUtils.clamp((1 - projected.y) / 2, 0.08, 0.9),
+            },
+            cameraFocus: worldPosition.toArray(),
+        });
     };
 
     return (
         <group
+            ref={dossierRef}
             position={position}
             scale={scale}
             onClick={handleOpen}

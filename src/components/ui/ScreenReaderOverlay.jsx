@@ -1,7 +1,12 @@
 import { useScene } from '../../context/SceneContext';
-import { useGalleryProjects, useAwards } from '../../hooks/useSanityData';
+import { useGalleryProjects } from '../../hooks/useSanityData';
 import { CONTENT_DATA as studioCapabilities, PROFILE_DATA } from '../canvas/rooms/Studio/contentData';
 import { STUDIO_SKILL_BALLOONS } from '../canvas/rooms/Studio/skillBalloonData';
+import {
+    ACHIEVEMENT_ENTRIES,
+    EDUCATION_ENTRY,
+    EXPERIENCE_ENTRIES,
+} from '../canvas/rooms/About/journeyData';
 import '../../styles/ScreenReaderOverlay.scss';
 
 /**
@@ -16,7 +21,6 @@ const ScreenReaderOverlay = () => {
     
     // Pobieranie danych do wygenerowania niewidocznego HTML-a dla SEO / robotów
     const projects = useGalleryProjects();
-    const awards = useAwards();
 
     return (
         <div className="sr-overlay" role="complementary" aria-label="Accessible navigation for 3D portfolio">
@@ -77,25 +81,44 @@ const ScreenReaderOverlay = () => {
                         {/* Room-specific content descriptions */}
                         {currentRoom === 'about' && (
                             <div aria-label="About room content">
-                                <h3>About Me</h3>
-                                <p>This room contains my personal story, achievements, and journey milestones.</p>
-                                
-                                {awards && (
-                                    <section>
-                                        <h4>My Capabilities</h4>
-                                        <ul>
-                                            {awards.sotd && awards.sotd.items && awards.sotd.items.map((a, i) => (
-                                                <li key={i}>{a.label} - {a.date}</li>
-                                            ))}
-                                            {awards.sotm && awards.sotm.items && awards.sotm.items.map((a, i) => (
-                                                <li key={i}>{a.label} - {a.date}</li>
-                                            ))}
-                                            {awards.other && awards.other.items && awards.other.items.map((a, i) => (
-                                                <li key={i}>{a.label} - {a.date}</li>
-                                            ))}
-                                        </ul>
-                                    </section>
-                                )}
+                                <h3>Abdullah&apos;s Journey</h3>
+                                <p>Fly through Abdullah&apos;s introduction, education, experience, and national hackathon achievements.</p>
+
+                                <section>
+                                    <h4>Education</h4>
+                                    <p>{EDUCATION_ENTRY.role}, {EDUCATION_ENTRY.title}. {EDUCATION_ENTRY.period}.</p>
+                                    <button type="button" onClick={() => openOverlay(EDUCATION_ENTRY)}>
+                                        Open education details
+                                    </button>
+                                </section>
+
+                                <section>
+                                    <h4>Experience</h4>
+                                    <ul>
+                                        {EXPERIENCE_ENTRIES.map((entry) => (
+                                            <li key={entry.id}>
+                                                <p>{entry.role}, {entry.title}. {entry.period}.</p>
+                                                <button type="button" onClick={() => openOverlay(entry)}>
+                                                    Open {entry.title} experience
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
+
+                                <section>
+                                    <h4>Achievements</h4>
+                                    <ul>
+                                        {ACHIEVEMENT_ENTRIES.map((entry) => (
+                                            <li key={entry.id}>
+                                                <p>{entry.role} — {entry.title}. {entry.period}.</p>
+                                                <button type="button" onClick={() => openOverlay(entry)}>
+                                                    Open {entry.title} achievement
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
                             </div>
                         )}
                         {currentRoom === 'gallery' && (
@@ -120,7 +143,17 @@ const ScreenReaderOverlay = () => {
                             <div aria-label="Contact room content">
                                 <h3>Contact Me</h3>
                                 <p>I am open to internships, selected freelance projects, and collaborations.</p>
-                                <p>Email: abdullahibnyousuf@outlook.com. GitHub: AbdullahIbnYousuf. LinkedIn: abdullahibnyousuf.</p>
+                                <p>
+                                    Email: abdullahibnyousuf@outlook.com. GitHub: AbdullahIbnYousuf. LinkedIn: abdullahibnyousuf.{' '}
+                                    <a
+                                        href="https://www.facebook.com/AAbdullahIbnYousuf"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        Facebook: AAbdullahIbnYousuf
+                                    </a>
+                                    .
+                                </p>
                             </div>
                         )}
                         {currentRoom === 'studio' && (

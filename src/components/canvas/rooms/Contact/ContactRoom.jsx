@@ -413,13 +413,13 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 paintOnBeforeCompile={onBeforeCompile}
                 paintUniforms={uniformsData}
             />
-            {/* AVAILABILITY */}
+            {/* FACEBOOK */}
             <SocialBarrel
                 position={isMobile ? [1.2, 0.5, -10] : [3, 0.5, -10]}
                 rotation={[0, -0.2, 0]}
                 texturePath="/textures/contact/beczka.webp"
-                label="AVAILABLE"
-                onClick={() => window.location.href = 'mailto:abdullahibnyousuf@outlook.com?subject=Internship%2C%20freelance%2C%20or%20collaboration opportunity'}
+                label="FACEBOOK"
+                onClick={() => window.open('https://www.facebook.com/AAbdullahIbnYousuf', '_blank', 'noopener,noreferrer')}
                 paintOnBeforeCompile={onBeforeCompile}
                 paintUniforms={uniformsData}
             />

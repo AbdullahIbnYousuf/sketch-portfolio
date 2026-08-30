@@ -55,22 +55,22 @@ const CorridorSegment = ({
             },
             {
                 id: `studio-${segmentIndex}`,
-                roomId: 'studio',
+                roomId: 'about',
                 relativeZ: -32,
                 side: 'right',
                 label: 'THE STUDIO',
                 icon: '▶',
-                color: '#e6f5ef'
+                color: '#e6f5ef',
+                enterDistance: 25 // Journey scenery sits deeper inside the room
             },
             {
                 id: `about-${segmentIndex}`,
-                roomId: 'about',
+                roomId: 'studio',
                 relativeZ: -48,
                 side: 'left',
                 label: 'THE ABOUT',
                 icon: '★',
-                color: '#efe6f5',
-                enterDistance: 25 // Enter deep into the room (clouds are far back)
+                color: '#efe6f5'
             },
             {
                 id: `connect-${segmentIndex}`,

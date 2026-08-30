@@ -70,11 +70,12 @@ const GlobalOverlay = () => {
 
 const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
     const label = content.platformConfig?.label || 'Content';
+    const cardOnLeft = !isMobile && content.overlaySide === 'left';
 
     // GSAP TextPlugin typing effect for description
     const descriptionRef = useRef(null);
     useEffect(() => {
-        const supportsTypedDescription = !['certificate_grid', 'profile', 'skill_group'].includes(content.layout);
+        const supportsTypedDescription = !['certificate_grid', 'profile', 'skill_group', 'journey_entry'].includes(content.layout);
         if (isOpen && supportsTypedDescription && content.description && descriptionRef.current) {
             gsap.killTweensOf(descriptionRef.current);
             gsap.fromTo(descriptionRef.current,
@@ -209,20 +210,27 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
     // --- KONFIGURACJA STYLU KARTKI (POZYCJA) ---
     // Używamy % lub vw/vh dla fluid-responsywności.
     const cardStyle = isMobile ? {
-        // MOBILE: Karta na dole
-        width: '90%',
-        maxHeight: '60vh',
-        bottom: '10rem', // <--- FLUID: WPROWADZONE PRZEZ UZYTKOWNIKA
+        // Keep the complete paper inside the mobile viewport, above room controls.
+        width: 'calc(100% - 1rem)',
+        maxWidth: '560px',
+        maxHeight: 'calc(100dvh - 7rem)',
+        bottom: '5.5rem',
         left: '50%',
         transform: isOpen ? 'translate(-50%, 0) rotate(-1deg)' : 'translate(-50%, 120%) rotate(10deg)',
         opacity: isOpen ? 1 : 0,
         color: '#1a1a1a',
     } : {
-        // DESKTOP: Karta po prawej
-        width: 'clamp(280px, 30vw, 450px)', // <--- FLUID
-        right: 'clamp(2rem, 12vw, 20rem)', // <--- FLUID: scales with viewport
+        // Give detail pages enough reading width without covering the spotlight.
+        width: 'clamp(340px, 36vw, 560px)',
+        maxHeight: '86vh',
+        left: cardOnLeft ? 'clamp(1.5rem, 4vw, 5rem)' : 'auto',
+        right: cardOnLeft ? 'auto' : 'clamp(1.5rem, 4vw, 5rem)',
         top: '50%',
-        transform: isOpen ? 'translateY(-50%) rotate(1deg)' : 'translate(150%, -50%) rotate(15deg)',
+        transform: isOpen
+            ? 'translateY(-50%) rotate(1deg)'
+            : cardOnLeft
+                ? 'translate(-150%, -50%) rotate(-15deg)'
+                : 'translate(150%, -50%) rotate(15deg)',
         opacity: isOpen ? 1 : 0,
         color: '#1a1a1a',
     };
@@ -236,24 +244,19 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
     });
 
     // --- KONFIGURACJA MASKI (SPOTLIGHT - CZARNA DZIURA) ---
+    const defaultFocus = content.layout === 'profile'
+        ? (isMobile ? { x: 0.5, y: 0.25 } : { x: 0.38, y: 0.5 })
+        : (isMobile ? { x: 0.5, y: 0.25 } : { x: 0.31, y: 0.5 });
+    const focus = content.overlayFocus || defaultFocus;
+    const focusX = Math.round(Math.min(0.94, Math.max(0.06, focus.x)) * 100);
+    const focusY = Math.round(Math.min(0.9, Math.max(0.08, focus.y)) * 100);
+
     const maskStyle = (content.layout === 'certificate_grid') ? {
         maskImage: 'none',
         WebkitMaskImage: 'none'
-    } : content.layout === 'profile' ? (isMobile ? {
-        maskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 42%)',
-        WebkitMaskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 42%)'
     } : {
-        maskImage: 'radial-gradient(circle at 38% 50%, transparent 0%, transparent 13%, black 38%)',
-        WebkitMaskImage: 'radial-gradient(circle at 38% 50%, transparent 0%, transparent 13%, black 38%)'
-    }) : isMobile ? {
-        // Mobile: Monitor jest na górze (50% szerokości, 25% wysokości od góry)
-        maskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 40%)',
-        WebkitMaskImage: 'radial-gradient(circle at 50% 25%, transparent 0%, transparent 15%, black 40%)'
-    } : {
-        // Desktop: Monitor jest po lewej (31% szerokości od lewej, 50% wysokości)
-        // WPROWADZONE PRZEZ UZYTKOWNIKA 31%
-        maskImage: 'radial-gradient(circle at 31% 50%, transparent 0%, transparent 12%, black 35%)',
-        WebkitMaskImage: 'radial-gradient(circle at 31% 50%, transparent 0%, transparent 12%, black 35%)'
+        maskImage: `radial-gradient(circle at ${focusX}% ${focusY}%, transparent 0%, transparent ${isMobile ? 14 : 12}%, black ${isMobile ? 40 : 35}%)`,
+        WebkitMaskImage: `radial-gradient(circle at ${focusX}% ${focusY}%, transparent 0%, transparent ${isMobile ? 14 : 12}%, black ${isMobile ? 40 : 35}%)`
     };
 
     return (
@@ -308,11 +311,13 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                 <div
                     style={{
                         position: 'absolute',
-                        padding: isMobile ? '1.5rem' : '2.5rem',
+                        padding: isMobile ? '1.15rem 1.1rem 1.25rem' : 'clamp(1.5rem, 2vw, 1.9rem)',
                         transition: transitionSpring, // The bouncy entrance
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '1.2rem',
+                        gap: isMobile ? '0.85rem' : '1rem',
+                        boxSizing: 'border-box',
+                        overflow: 'hidden',
                         fontFamily: "'Cabin Sketch', cursive", // Hand-drawn vibe
                         pointerEvents: 'auto', // Re-enable clicks for the card
                         ...cardStyle,
@@ -329,14 +334,17 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                             transform: isOpen ? 'translate(-50%, -50%)' : 'translate(-50%, 100%)',
                         } : content.layout === 'profile' ? {
                             width: isMobile ? '92vw' : 'clamp(420px, 48vw, 760px)',
-                            maxHeight: isMobile ? '72vh' : '82vh',
+                            maxHeight: isMobile ? 'calc(100dvh - 7rem)' : '86vh',
                             right: isMobile ? 'auto' : 'clamp(1.5rem, 5vw, 7rem)',
                             left: isMobile ? '50%' : 'auto',
                             top: isMobile ? 'auto' : '50%',
-                            bottom: isMobile ? '6rem' : 'auto',
+                            bottom: isMobile ? '5.5rem' : 'auto',
                             transform: isMobile
                                 ? (isOpen ? 'translate(-50%, 0) rotate(-1deg)' : 'translate(-50%, 120%) rotate(8deg)')
                                 : (isOpen ? 'translateY(-50%) rotate(0.5deg)' : 'translate(120%, -50%) rotate(10deg)'),
+                        } : content.layout === 'journey_entry' ? {
+                            width: isMobile ? 'calc(100% - 1rem)' : 'clamp(380px, 40vw, 620px)',
+                            maxHeight: isMobile ? 'calc(100dvh - 7rem)' : '86vh',
                         } : {})
                     }}
                     className="studio-paper-card"
@@ -386,10 +394,11 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'flex-start',
-                        marginBottom: '1rem',
+                        flexShrink: 0,
+                        marginBottom: '0.15rem',
                         ...getStaggerStyle(100)
                     }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem', minWidth: 0 }}>
                             <span style={{
                                 textTransform: 'uppercase',
                                 fontSize: '0.7rem',
@@ -400,12 +409,13 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                 {label}
                             </span>
                             <h2 style={{
-                                fontSize: '1.8rem',
+                                fontSize: isMobile ? 'clamp(1.35rem, 6vw, 1.7rem)' : 'clamp(1.55rem, 2.2vw, 1.9rem)',
                                 margin: 0,
-                                lineHeight: 1.2,
+                                lineHeight: 1.12,
                                 fontWeight: 800,
                                 color: '#1a1a1a',
                                 fontFamily: "'Cabin Sketch', cursive", // High-contrast solid black font
+                                overflowWrap: 'anywhere',
                             }}>
                                 {content.title}
                             </h2>
@@ -513,12 +523,11 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                     ) : content.layout === 'profile' ? (
                         <div
                             ref={scrollContainerRef}
+                            className="paper-detail-scroll"
                             style={{
-                                overflowY: 'auto',
-                                paddingRight: '0.5rem',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: '1rem',
+                                gap: '0.9rem',
                                 ...getStaggerStyle(180)
                             }}
                         >
@@ -526,7 +535,7 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                 display: 'flex',
                                 flexWrap: 'wrap',
                                 gap: '0.55rem',
-                                paddingBottom: '1rem',
+                                paddingBottom: '0.65rem',
                                 borderBottom: '1px dashed #9a9a9a'
                             }}>
                                 {[content.status, content.location, content.education].filter(Boolean).map((item) => (
@@ -544,10 +553,10 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                             </div>
 
                             <p style={{
-                                lineHeight: 1.65,
+                                lineHeight: 1.5,
                                 color: '#1a1a1a',
                                 fontWeight: 700,
-                                fontSize: '1.05rem',
+                                fontSize: '1rem',
                                 margin: 0
                             }}>
                                 {content.description}
@@ -555,25 +564,17 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
 
                             {content.sections?.map((section) => (
                                 <section key={section.title}>
-                                    <h3 style={{
-                                        margin: '0 0 0.35rem',
-                                        fontFamily: "'Rubik Scribble', cursive",
-                                        fontSize: '1.25rem'
-                                    }}>
+                                    <h3 className="paper-detail-heading">
                                         {section.title}
                                     </h3>
-                                    <p style={{ margin: 0, lineHeight: 1.6, fontWeight: 600 }}>
+                                    <p className="paper-detail-body">
                                         {section.body}
                                     </p>
                                 </section>
                             ))}
 
                             <section>
-                                <h3 style={{
-                                    margin: '0 0 0.6rem',
-                                    fontFamily: "'Rubik Scribble', cursive",
-                                    fontSize: '1.25rem'
-                                }}>
+                                <h3 className="paper-detail-heading paper-detail-heading--spaced">
                                     How I work
                                 </h3>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem' }}>
@@ -602,8 +603,92 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                 {content.availability}
                             </p>
                         </div>
+                    ) : content.layout === 'journey_entry' ? (
+                        <div
+                            ref={scrollContainerRef}
+                            className="paper-detail-scroll"
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '0.9rem',
+                                ...getStaggerStyle(180)
+                            }}
+                        >
+                            <div style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                gap: '0.55rem',
+                                paddingBottom: '0.65rem',
+                                borderBottom: '1px dashed #9a9a9a'
+                            }}>
+                                {[content.role, content.period, content.location, content.status, content.event]
+                                    .filter(Boolean)
+                                    .map((item) => (
+                                        <span key={item} style={{
+                                            padding: '0.35rem 0.65rem',
+                                            backgroundColor: '#e8f8fb',
+                                            border: '1px solid #1a1a1a',
+                                            borderRadius: '2px 12px 3px 10px',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 700
+                                        }}>
+                                            {item}
+                                        </span>
+                                    ))}
+                            </div>
+
+                            <p style={{
+                                lineHeight: 1.5,
+                                color: '#1a1a1a',
+                                fontWeight: 700,
+                                fontSize: '1rem',
+                                margin: 0
+                            }}>
+                                {content.summary}
+                            </p>
+
+                            {content.details?.map((section) => (
+                                <section key={section.title}>
+                                    <h3 className="paper-detail-heading">
+                                        {section.title}
+                                    </h3>
+                                    <p className="paper-detail-body">
+                                        {section.body}
+                                    </p>
+                                </section>
+                            ))}
+
+                            {content.highlights?.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem' }}>
+                                    {content.highlights.map((highlight) => (
+                                        <span key={highlight} style={{
+                                            padding: '0.45rem 0.7rem',
+                                            backgroundColor: '#fff8cf',
+                                            border: '1.5px solid #1a1a1a',
+                                            boxShadow: '2px 2px 0 rgba(0,0,0,0.1)',
+                                            fontWeight: 700
+                                        }}>
+                                            {highlight}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {content.url && (
+                                <div style={{ marginTop: '0.1rem', paddingTop: '0.2rem' }}>
+                                    <a
+                                        href={content.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="studio-action-button"
+                                    >
+                                        {content.linkLabel || 'Open Related Project'} ↗
+                                    </a>
+                                </div>
+                            )}
+                        </div>
                     ) : content.layout === 'skill_group' ? (
-                        <>
+                        <div ref={scrollContainerRef} className="paper-detail-scroll paper-detail-scroll--compact">
                             <div style={{
                                 display: 'flex',
                                 flexWrap: 'wrap',
@@ -649,10 +734,10 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                     </span>
                                 ))}
                             </div>
-                        </>
+                        </div>
                     ) : (
                         /* === LAYOUT: DEFAULT (The Studio Style) === */
-                        <>
+                        <div ref={scrollContainerRef} className="paper-detail-scroll paper-detail-scroll--compact">
                             {/* Meta Info */}
                             <div style={{
                                 display: 'flex',
@@ -700,7 +785,7 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                     </a>
                                 </div>
                             )}
-                        </>
+                        </div>
                     )}
                 </div>
             </div>

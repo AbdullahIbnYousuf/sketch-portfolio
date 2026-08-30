@@ -1,13 +1,14 @@
-import { useRef, useState, useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text, PositionalAudio } from '@react-three/drei';
+import { PositionalAudio } from '@react-three/drei';
 import * as THREE from 'three';
 import PaperAirplane from './PaperAirplane';
 import InfiniteSkyManager from './InfiniteSkyManager';
-import StoryMilestone from './StoryMilestone';
 import { useScene } from '../../../../context/SceneContext';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { useAudio } from '../../../../context/AudioManager';
+import { getFramedCameraPosition } from '../../../../utils/cameraFraming';
+import gsap from 'gsap';
 
 // Chunk length for looping flight effect (matches SkyChunk)
 const CHUNK_LENGTH = 40;
@@ -21,14 +22,6 @@ export const AUDIO_SETTINGS = {
     distance: 2,
     rolloff: 0.8
 };
-
-// Story sections - positions define where each milestone appears
-// Using CHUNK_LENGTH to create looping story (every ~40 units restarts)
-const STORY_MILESTONES = [
-    { id: 'intro', position: [0, 0, -15], type: 'intro', title: 'ABDULLAH IBN YOUSUF', subtitle: '< computer science student • software & AI developer />' },
-    { id: 'focus', position: [0, 0, -55], type: 'awards', title: 'ACHIEVEMENTS', subtitle: 'Hackathons • Practical Products • Technical Growth' },
-    { id: 'journey', position: [0, 0, -95], type: 'journey', title: 'JOURNEY', subtitle: 'Student • Machine Learning Intern • Founder • Freelancer' },
-];
 
 const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     const { camera } = useThree();
@@ -72,6 +65,7 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // Smoothed flight effect values
     const currentBank = useRef(0);
     const currentPitch = useRef(0);
+    const focusCameraState = useRef(null);
 
     // Ref for the entire room to manage frustum culling
     const roomRef = useRef();
@@ -89,6 +83,62 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             scrollVelocity.current = 0;
         }
     }, [isTeleporting]);
+
+    // A restrained dolly along the exact camera-to-object ray makes the
+    // selected milestone feel closer without shifting it away from the
+    // spotlight. Closing the paper restores the precise flight position.
+    useEffect(() => {
+        const focus = overlayContent?.cameraFocus;
+        const frame = overlayContent?.cameraFrame;
+
+        if (focus && frame && !focusCameraState.current && !isTeleporting && !isExiting) {
+            focusCameraState.current = {
+                position: camera.position.clone(),
+            };
+
+            const focusPosition = new THREE.Vector3(...focus);
+            const targetPosition = getFramedCameraPosition({
+                camera,
+                focusWorld: focusPosition,
+                screenX: frame.x,
+                screenY: frame.y,
+                dollyRatio: 0.035,
+                maxDolly: 0.55,
+            });
+
+            gsap.killTweensOf(camera.position);
+            gsap.to(camera.position, {
+                x: targetPosition.x,
+                y: targetPosition.y,
+                z: targetPosition.z,
+                duration: 0.8,
+                ease: 'power2.inOut',
+                overwrite: true,
+            });
+        } else if (!overlayContent && focusCameraState.current && !isTeleporting && !isExiting) {
+            const originalPosition = focusCameraState.current.position;
+            focusCameraState.current = null;
+
+            gsap.killTweensOf(camera.position);
+            gsap.to(camera.position, {
+                x: originalPosition.x,
+                y: originalPosition.y,
+                z: originalPosition.z,
+                duration: 0.65,
+                ease: 'power2.inOut',
+                overwrite: true,
+            });
+        }
+
+        if ((isTeleporting || isExiting) && focusCameraState.current) {
+            gsap.killTweensOf(camera.position);
+            focusCameraState.current = null;
+        }
+    }, [camera, isExiting, isTeleporting, overlayContent]);
+
+    useEffect(() => () => {
+        gsap.killTweensOf(camera.position);
+    }, [camera]);
 
     // Ready detection + flight animation
     useFrame((state, delta) => {
@@ -110,6 +160,18 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             return;
         }
 
+        // Keep the selected milestone fixed behind its paper overlay.
+        if (overlayContent) {
+            scrollVelocity.current = 0;
+            return;
+        }
+
+        // DoorSection owns the camera while leaving the room.
+        if (isExiting) {
+            scrollVelocity.current = 0;
+            return;
+        }
+
         // Apply velocity to position (momentum)
         scrollPosition.current += scrollVelocity.current * delta * 60;
         // No clamp - allow flying backward too!
@@ -123,13 +185,6 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         // Unlock achievement if user scrolled enough
         if (scrollPosition.current > 15) {
             unlockAchievement('about_fly');
-        }
-
-        // === EXITING: Disable control completely ===
-        // DoorSection handles the exit animation (position + rotation)
-        // We must STOP touching the camera to avoid conflicts/snapping
-        if (isExiting) {
-            return;
         }
 
         // === FLIGHT EFFECT (camera rotation only) ===
@@ -177,6 +232,8 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         if (airplaneGroupRef.current) {
             airplaneGroupRef.current.rotation.x = currentPitch.current * 3 + 0.1;
             airplaneGroupRef.current.rotation.z = -currentBank.current * 2;
+            airplaneGroupRef.current.position.x = currentBank.current * 2.5;
+            airplaneGroupRef.current.position.y = -1.05 + currentPitch.current * 1.5;
         }
     });
 
@@ -234,7 +291,7 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             )}
 
             {/* === PAPER AIRPLANE (follows camera maneuvers) === */}
-            <group ref={airplaneGroupRef} position={[0, -0.3, 1]}>
+            <group ref={airplaneGroupRef} position={[0, -1.05, 1]}>
                 <PaperAirplane
                     scale={0.8}
                     color="#faf8f5"

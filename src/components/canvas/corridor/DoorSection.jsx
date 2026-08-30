@@ -1158,6 +1158,7 @@ const DoorSection = ({
                     {/* Always render, but pass showRoom prop for lazy loading giant room */}
                     <RoomInterior
                         label={label}
+                        roomId={doorId}
                         showRoom={shouldRenderRoom}
                         onReady={handleRoomReady}
                         isExiting={isInsideRoom && isAnimating}
