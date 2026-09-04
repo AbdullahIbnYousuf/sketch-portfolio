@@ -19,7 +19,10 @@ export const SceneProvider = ({ children }) => {
     const deeplinkHandled = useRef(false);
 
     const [currentRoom, setCurrentRoom] = useState(null); // null = corridor, 'about', 'portfolio', etc.
-    const [hasEntered, setHasEntered] = useState(false);  // Has user clicked entrance doors?
+    // A direct room URL has already passed the site's entrance conceptually.
+    // Starting in entered mode lets its fast teleport run behind the loader,
+    // instead of briefly revealing the entrance and then jumping to the room.
+    const [hasEntered, setHasEntered] = useState(() => Boolean(initialRoom.current));
     const [exitRequested, setExitRequested] = useState(false); // Signal to request exit from room
     const [overlayContent, setOverlayContent] = useState(null); // Content for overlay (Studio monitor etc)
 

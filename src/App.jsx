@@ -58,11 +58,15 @@ function DocumentMetaBridge() {
 
   useEffect(() => {
     if (initialRoom && hasEntered && !deeplinkHandled.current) {
-      deeplinkHandled.current = true;
       const teleportTimer = setTimeout(() => {
         // Back may have returned to the corridor during this short entrance
         // delay. Only honor the deep link while its route is still active.
         if (getInitialRoomFromUrl() === initialRoom) {
+          // Mark the route handled only when its teleport really begins.
+          // Setting this before the timer is unsafe in React StrictMode:
+          // the first effect cleanup cancels the timer, then the repeated
+          // effect sees the flag and never schedules the navigation again.
+          deeplinkHandled.current = true;
           teleportTo(initialRoom);
         }
       }, 300);
@@ -140,10 +144,13 @@ function AppContent() {
             <>
               <NavigationUI />
               <GlobalOverlay />
-              <PaperTransition />
               <ScreenReaderOverlay />
             </>
           )}
+
+          {/* Keep this mounted during initial loading so a direct room URL can
+              complete its hidden teleport before the preloader reveals it. */}
+          <PaperTransition />
 
           {/* 2D Preloader */}
           <Preloader
