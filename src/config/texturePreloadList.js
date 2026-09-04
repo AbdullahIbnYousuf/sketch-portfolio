@@ -259,8 +259,13 @@ export const ROOM_TEXTURES = Object.freeze({
 
 export const getRoomIdFromPath = (pathname = '/') => {
     const normalizedPath = pathname.replace(/\/+$/, '') || '/';
-    const roomId = normalizedPath.slice(1);
-    return Object.hasOwn(ROOM_TEXTURES, roomId) ? roomId : null;
+    const publicPathToRoom = {
+        '/gallery': 'gallery',
+        '/journey': 'about',
+        '/about': 'studio',
+        '/contact': 'contact',
+    };
+    return publicPathToRoom[normalizedPath] || null;
 };
 
 export const getPreloadPlan = ({ tier, pathname = '/', supportsHover = false }) => {

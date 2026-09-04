@@ -12,7 +12,7 @@ import { SceneProvider, useScene } from './context/SceneContext';
 import NavigationUI from './components/ui/NavigationUI';
 import GlobalOverlay from './components/ui/GlobalOverlay';
 import ScreenReaderOverlay from './components/ui/ScreenReaderOverlay';
-import { useDocumentMeta } from './hooks/useDocumentMeta';
+import { getInitialRoomFromUrl, useDocumentMeta } from './hooks/useDocumentMeta';
 import { detectPerformanceTier } from './config/performanceConfig';
 import { preloadInitialAssets } from './utils/assetPreloader';
 
@@ -59,7 +59,15 @@ function DocumentMetaBridge() {
   useEffect(() => {
     if (initialRoom && hasEntered && !deeplinkHandled.current) {
       deeplinkHandled.current = true;
-      setTimeout(() => teleportTo(initialRoom), 300);
+      const teleportTimer = setTimeout(() => {
+        // Back may have returned to the corridor during this short entrance
+        // delay. Only honor the deep link while its route is still active.
+        if (getInitialRoomFromUrl() === initialRoom) {
+          teleportTo(initialRoom);
+        }
+      }, 300);
+
+      return () => clearTimeout(teleportTimer);
     }
   }, [initialRoom, hasEntered, teleportTo, deeplinkHandled]);
 

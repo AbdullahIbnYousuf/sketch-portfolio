@@ -23,10 +23,10 @@ const ROOM_CONFIG = {
 };
 
 const SUBTITLES = {
-    'THE GALLERY': 'Explore my creative projects',
-    'THE STUDIO': 'Explore my profile and capabilities',
-    'DEV DIARY': 'My development journey',
-    "LET'S CONNECT": 'Get in touch with me'
+    gallery: 'Explore my creative projects',
+    about: 'My education, experience, and achievements',
+    studio: 'Explore my profile and capabilities',
+    contact: 'Get in touch with me',
 };
 
 // Naturalny kafelek listwy: 1582x94px przy wysokości 0.15 → ~2.524 units szerokości
@@ -139,10 +139,10 @@ const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
 
     // Trigger onReady for generic rooms (which don't have their own component to do it)
     useEffect(() => {
-        if (showRoom && !['THE GALLERY', 'THE STUDIO', 'THE ABOUT', "LET'S CONNECT"].includes(label)) {
+        if (showRoom && !['gallery', 'about', 'studio', 'contact'].includes(roomId)) {
             onReady?.();
         }
-    }, [showRoom, label, onReady]);
+    }, [showRoom, roomId, onReady]);
 
     return (
         <group position={[0, -0.149, 0]}>
@@ -306,7 +306,7 @@ const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
                                 maxWidth={roomWidth * 0.7}
                                 textAlign="center"
                             >
-                                {SUBTITLES[label] || ''}
+                                {SUBTITLES[roomId] || ''}
                             </Text>
 
                             {/* Lighting - WYLACZONE */}

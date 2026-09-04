@@ -3,6 +3,7 @@ import { getInitialRoomFromUrl } from '../hooks/useDocumentMeta';
 import { preloadRoomAssets } from '../utils/assetPreloader';
 
 const SceneContext = createContext(null);
+const VALID_ROOM_IDS = new Set(['about', 'gallery', 'studio', 'contact']);
 
 export const useScene = () => {
     const context = useContext(SceneContext);
@@ -77,6 +78,13 @@ export const SceneProvider = ({ children }) => {
 
     // Initiate teleport - called when user clicks room on map
     const teleportTo = useCallback((roomId) => {
+        if (!VALID_ROOM_IDS.has(roomId)) {
+            if (import.meta.env.DEV) {
+                console.warn(`[SceneContext] Ignored invalid teleport destination: ${String(roomId)}`);
+            }
+            return;
+        }
+
         if (isTeleporting || roomId === currentRoom) return; // Prevent double teleport or same room
 
         preloadRoomAssets(roomId);

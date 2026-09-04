@@ -40,20 +40,21 @@ const DOOR_LOOK_ANGLE = Math.PI * 0.334;
 // Higher value = further from door center horizontally
 const DOOR_ALIGN_X = 1.2;
 
-// Door texture mapping - maps label to texture file
+// Door texture mapping - keyed by the room ID so visible labels can change
+// without changing the artwork or door behavior.
 const DOOR_TEXTURES = {
-    'THE GALLERY': '/textures/corridor/doors/drzwiprojekty.webp',
-    'THE STUDIO': '/textures/corridor/doors/drzwisocial.webp',
-    'THE ABOUT': '/textures/corridor/doors/drzwiabout.webp',
-    "LET'S CONNECT": '/textures/corridor/doors/drzwikontakt.webp',
+    gallery: '/textures/corridor/doors/drzwiprojekty.webp',
+    about: '/textures/corridor/doors/drzwisocial.webp',
+    studio: '/textures/corridor/doors/drzwiabout.webp',
+    contact: '/textures/corridor/doors/drzwikontakt.webp',
 };
 
 // Painted (colored) variants for brush-stroke reveal on hover
 const DOOR_PAINTED_TEXTURES = {
-    'THE GALLERY': '/textures/corridor/doors/drzwiprojekty_painted.webp',
-    'THE STUDIO': '/textures/corridor/doors/drzwisocial_painted.webp',
-    'THE ABOUT': '/textures/corridor/doors/drzwiabout_painted.webp',
-    "LET'S CONNECT": '/textures/corridor/doors/drzwikontakt_painted.webp',
+    gallery: '/textures/corridor/doors/drzwiprojekty_painted.webp',
+    about: '/textures/corridor/doors/drzwisocial_painted.webp',
+    studio: '/textures/corridor/doors/drzwiabout_painted.webp',
+    contact: '/textures/corridor/doors/drzwikontakt_painted.webp',
 };
 
 
@@ -124,9 +125,9 @@ const DoorSection = ({
         if (roomId) return roomId;
 
         // Fallback for older code
-        if (label === 'THE GALLERY') return 'gallery';
-        if (label === 'THE STUDIO') return 'studio';
-        if (label === 'THE ABOUT') return 'about';
+        if (label === 'GALLERY') return 'gallery';
+        if (label === 'JOURNEY') return 'about';
+        if (label === 'ABOUT') return 'studio';
         if (label === "LET'S CONNECT") return 'contact';
         return null;
     }, [label, roomId]);
@@ -209,13 +210,13 @@ const DoorSection = ({
     }, [originalWallTexture]);
 
     // Load door textures - use the right texture based on label
-    const doorTexturePath = DOOR_TEXTURES[label] || DOOR_TEXTURES['THE GALLERY'];
+    const doorTexturePath = DOOR_TEXTURES[doorId] || DOOR_TEXTURES.gallery;
     const doorTexture = useTexture(doorTexturePath);
 
     const isTouch = isTouchDevice();
     const dummyTex = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-    const doorPaintedTexturePath = DOOR_PAINTED_TEXTURES[label] || DOOR_PAINTED_TEXTURES['THE GALLERY'];
+    const doorPaintedTexturePath = DOOR_PAINTED_TEXTURES[doorId] || DOOR_PAINTED_TEXTURES.gallery;
     const doorPaintedTexture = useTexture(isTouch ? dummyTex : doorPaintedTexturePath);
     const frameTexture = useTexture('/textures/corridor/doors/ramkasingledoors.webp');
     const handleTexture = useTexture('/textures/corridor/doors/klamkadodrzwi.webp');
@@ -252,7 +253,7 @@ const DoorSection = ({
     }, [baseboardTexture]);
 
     // Door dimensions - based on legacy texture aspect ratio (approx 0.376)
-    const doorRatio = label === 'THE STUDIO' ? 0.388 : 0.376;
+    const doorRatio = doorId === 'about' ? 0.388 : 0.376;
     const doorHeight = 2.5;
     const doorWidth = doorHeight * doorRatio * 1.12;
 
@@ -1072,55 +1073,7 @@ const DoorSection = ({
                         </mesh>
 
                         {/* === DYNAMIC TEXT FOR SIGNS === */}
-                        {label === 'THE GALLERY' && (
-                            <group position={[0, 0, 0.01]}>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="bottom"
-                                    position={[0, -0.02, 0]}
-                                >
-                                    THE
-                                </Text>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="top"
-                                    position={[0, +0.02, 0]}
-                                >
-                                    GALLERY
-                                </Text>
-                            </group>
-                        )}
-                        {label === 'THE STUDIO' && (
-                            <group position={[0, 0, 0.01]}>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="bottom"
-                                    position={[0, -0.02, 0]}
-                                >
-                                    THE
-                                </Text>
-                                <Text
-                                    font="/fonts/CabinSketch-Bold.ttf"
-                                    fontSize={0.25}
-                                    color="#111111"
-                                    anchorX="center"
-                                    anchorY="top"
-                                    position={[0, +0.03, 0]}
-                                >
-                                    STUDIO
-                                </Text>
-                            </group>
-                        )}
-                        {label === 'THE ABOUT' && (
+                        {label !== "LET'S CONNECT" && (
                             <Text
                                 font="/fonts/CabinSketch-Bold.ttf"
                                 fontSize={0.30}
@@ -1129,7 +1082,7 @@ const DoorSection = ({
                                 anchorY="middle"
                                 position={[0, 0, 0.01]}
                             >
-                                ABOUT
+                                {label}
                             </Text>
                         )}
                         {label === "LET'S CONNECT" && (
@@ -1186,7 +1139,7 @@ const DoorSection = ({
                         <mesh
                             ref={doorPaintedRef}
                             position={[doorMeshX, -0.2, -0.001]}
-                            scale={[(side === 'right' && label !== 'THE STUDIO') ? -1 : 1, 1, 1]}
+                            scale={[(side === 'right' && doorId !== 'about') ? -1 : 1, 1, 1]}
                         >
                             <planeGeometry args={[doorWidth, doorHeight]} />
                             <meshBasicMaterial color="#fcf3c6"
@@ -1200,7 +1153,7 @@ const DoorSection = ({
                         {/* Sketch overlay (front) - brush-stroke discard reveals painted beneath */}
                         <mesh
                             position={[doorMeshX, -0.2, 0]}
-                            scale={[(side === 'right' && label !== 'THE STUDIO') ? -1 : 1, 1, 1]}
+                            scale={[(side === 'right' && doorId !== 'about') ? -1 : 1, 1, 1]}
                         >
                             <planeGeometry args={[doorWidth, doorHeight]} />
                             <revealMaterial color="#fcf3c6"

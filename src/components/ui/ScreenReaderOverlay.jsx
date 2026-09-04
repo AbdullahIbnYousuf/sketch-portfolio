@@ -9,6 +9,13 @@ import {
 } from '../canvas/rooms/About/journeyData';
 import '../../styles/ScreenReaderOverlay.scss';
 
+const ROOM_DISPLAY_NAMES = {
+    about: 'Journey',
+    gallery: 'Gallery',
+    contact: 'Contact',
+    studio: 'About',
+};
+
 /**
  * ScreenReaderOverlay — A7 Accessibility
  * 
@@ -44,12 +51,12 @@ const ScreenReaderOverlay = () => {
                         <ul>
                             <li>
                                 <button onClick={() => teleportTo('about')} type="button">
-                                    About — My story, achievements, and journey
+                                    Journey — My education, experience, and achievements
                                 </button>
                             </li>
                             <li>
                                 <button onClick={() => teleportTo('gallery')} type="button">
-                                    The Gallery — My projects and work
+                                    Gallery — My projects and work
                                 </button>
                             </li>
                             <li>
@@ -59,7 +66,7 @@ const ScreenReaderOverlay = () => {
                             </li>
                             <li>
                                 <button onClick={() => teleportTo('studio')} type="button">
-                                    The Studio — Profile, capabilities, and technologies
+                                    About — Profile, capabilities, and technologies
                                 </button>
                             </li>
                         </ul>
@@ -69,10 +76,7 @@ const ScreenReaderOverlay = () => {
                 {hasEntered && isInRoom && (
                     <>
                         <p>
-                            You are in the {currentRoom === 'about' ? 'About' :
-                                currentRoom === 'gallery' ? 'Gallery' :
-                                    currentRoom === 'contact' ? 'Contact' :
-                                        currentRoom === 'studio' ? 'Studio' : currentRoom} room.
+                            You are in the {ROOM_DISPLAY_NAMES[currentRoom] || currentRoom} room.
                         </p>
                         <button onClick={requestExit} type="button">
                             Go back to corridor
@@ -80,7 +84,7 @@ const ScreenReaderOverlay = () => {
 
                         {/* Room-specific content descriptions */}
                         {currentRoom === 'about' && (
-                            <div aria-label="About room content">
+                            <div aria-label="Journey room content">
                                 <h3>Abdullah&apos;s Journey</h3>
                                 <p>Fly through Abdullah&apos;s introduction, education, experience, and national hackathon achievements.</p>
 
@@ -157,8 +161,8 @@ const ScreenReaderOverlay = () => {
                             </div>
                         )}
                         {currentRoom === 'studio' && (
-                            <div aria-label="Studio room content">
-                                <h3>The Studio</h3>
+                            <div aria-label="About room content">
+                                <h3>About Abdullah</h3>
                                 <button
                                     type="button"
                                     aria-label="Open Abdullah's dossier"
@@ -219,7 +223,7 @@ const ScreenReaderOverlay = () => {
                         <h3>Quick Navigation</h3>
                         <ul>
                             {currentRoom !== 'about' && (
-                                <li><button onClick={() => teleportTo('about')} type="button">Go to About</button></li>
+                                <li><button onClick={() => teleportTo('about')} type="button">Go to Journey</button></li>
                             )}
                             {currentRoom !== 'gallery' && (
                                 <li><button onClick={() => teleportTo('gallery')} type="button">Go to Gallery</button></li>
@@ -228,7 +232,7 @@ const ScreenReaderOverlay = () => {
                                 <li><button onClick={() => teleportTo('contact')} type="button">Go to Contact</button></li>
                             )}
                             {currentRoom !== 'studio' && (
-                                <li><button onClick={() => teleportTo('studio')} type="button">Go to Studio</button></li>
+                                <li><button onClick={() => teleportTo('studio')} type="button">Go to About</button></li>
                             )}
                         </ul>
                     </>
@@ -237,7 +241,7 @@ const ScreenReaderOverlay = () => {
 
             {/* Live region for state changes */}
             <div aria-live="polite" aria-atomic="true" className="sr-only">
-                {isInRoom && `Entered ${currentRoom} room`}
+                {isInRoom && `Entered ${ROOM_DISPLAY_NAMES[currentRoom] || currentRoom} room`}
             </div>
         </div>
     );

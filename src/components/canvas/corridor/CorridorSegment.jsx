@@ -49,7 +49,7 @@ const CorridorSegment = ({
                 roomId: 'gallery',
                 relativeZ: -18,
                 side: 'left',
-                label: 'THE GALLERY',
+                label: 'GALLERY',
                 icon: '◈',
                 color: '#f5efe6'
             },
@@ -58,7 +58,7 @@ const CorridorSegment = ({
                 roomId: 'about',
                 relativeZ: -32,
                 side: 'right',
-                label: 'THE STUDIO',
+                label: 'JOURNEY',
                 icon: '▶',
                 color: '#e6f5ef',
                 enterDistance: 25 // Journey scenery sits deeper inside the room
@@ -68,7 +68,7 @@ const CorridorSegment = ({
                 roomId: 'studio',
                 relativeZ: -48,
                 side: 'left',
-                label: 'THE ABOUT',
+                label: 'ABOUT',
                 icon: '★',
                 color: '#efe6f5'
             },

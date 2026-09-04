@@ -14,16 +14,16 @@ The portfolio begins at a sketch-style entrance and continues into an infinite c
 | --- | --- |
 | Gallery | Featured software and AI projects presented as an explorable paper city. |
 | Journey | A paper-airplane flight through Abdullah's introduction, IUT education, professional experience, and hackathon achievements. |
-| Studio | A profile dossier, rotating capability monitors, and interactive skill balloons. |
+| About | A profile dossier, rotating capability monitors, and interactive skill balloons. |
 | Contact | A seaside message-in-a-bottle experience with GitHub, LinkedIn, Facebook, email, and direct-message options. |
 
 Notable interactions include:
 
 - Animated corridor doors and room-to-room teleportation
 - Scroll, pointer, keyboard, and touch navigation
-- Object-aware camera framing for clicked Journey items and Studio displays
+- Object-aware camera framing for clicked Journey items and About displays
 - Paper-style detail overlays for projects, capabilities, education, experience, and achievements
-- Rotating and vertically looping Studio monitors
+- Rotating and vertically looping capability monitors
 - Interactive skill balloons with hover, pop, audio, fade, and respawn effects
 - Spatial room ambience and adjustable audio controls
 - Responsive rendering and device-aware texture preloading
@@ -105,8 +105,8 @@ The application uses browser history to keep each 3D room directly addressable:
 | --- | --- |
 | `/` | Entrance and corridor |
 | `/gallery` | Project Gallery |
-| `/about` | Journey |
-| `/studio` | Studio monitor room |
+| `/journey` | Journey |
+| `/about` | About dossier and capability room |
 | `/contact` | Contact room |
 
 Cloudflare Pages handles these SPA routes automatically. On another static host, configure every application route to fall back to `index.html` so direct visits work correctly.
@@ -125,7 +125,7 @@ sketch-portfolio/
 │   ├── components/
 │   │   ├── canvas/
 │   │   │   ├── corridor/        # Entrance, corridor, doors, and teleportation
-│   │   │   └── rooms/           # Gallery, About/Journey, Studio, and Contact
+│   │   │   └── rooms/           # Gallery, Journey, About, and Contact
 │   │   ├── dom/                 # Preloader and paper transitions
 │   │   └── ui/                  # HUD, navigation, overlays, and accessibility
 │   ├── config/                  # Texture preload configuration
@@ -147,8 +147,8 @@ The main editable content is intentionally separated from most scene code:
 - Personal source data: `doc/PORTFOLIO_DATA_Abdullah_Ibn_Yousuf.md`
 - Projects: `src/data/projects.js`
 - Journey entries: `src/components/canvas/rooms/About/journeyData.js`
-- Studio dossier and capability groups: `src/components/canvas/rooms/Studio/contentData.js`
-- Studio skill balloons: `src/components/canvas/rooms/Studio/skillBalloonData.js`
+- About dossier and capability groups: `src/components/canvas/rooms/Studio/contentData.js`
+- About skill balloons: `src/components/canvas/rooms/Studio/skillBalloonData.js`
 - Contact links and barrel placement: `src/components/canvas/rooms/Contact/ContactRoom.jsx`
 - Contact form configuration: `src/components/canvas/rooms/Contact/MessagePaper.jsx`
 - Preloaded assets: `src/config/texturePreloadList.js`
@@ -171,7 +171,7 @@ For Cloudflare Pages, add `VITE_WEB3FORMS_KEY` in the project's environment vari
 
 ## Accessibility and Performance
 
-The portfolio includes an accessible navigation layer for users who cannot interact with the canvas directly. Room descriptions, project links, Journey entries, Studio content, and contact details remain available to assistive technologies.
+The portfolio includes an accessible navigation layer for users who cannot interact with the canvas directly. Room descriptions, project links, Journey entries, About content, and contact details remain available to assistive technologies.
 
 Rendering quality adapts to device capability, and mobile layouts use reduced object counts and touch-friendly controls where appropriate. Because the experience loads many textures and audio files, the first visit can take longer on slower connections.
 

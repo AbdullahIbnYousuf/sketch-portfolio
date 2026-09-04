@@ -20,10 +20,12 @@ export const ROOM_META = Object.freeze({
         title: 'Abdullah Ibn Yousuf — Software & AI Developer',
         description: 'Portfolio of Abdullah Ibn Yousuf, a Computer Science and Engineering student building practical software, AI-assisted applications, backend systems, and full-stack products.',
     },
+    // Internal room IDs are retained for 3D stability: `about` is Journey,
+    // while `studio` is the public About dossier room.
     about: {
-        path: '/about',
-        title: 'About — Abdullah Ibn Yousuf',
-        description: 'Learn about Abdullah Ibn Yousuf, a CSE student, Machine Learning Intern, freelancer, and founder of MayX Labs in Gazipur, Bangladesh.',
+        path: '/journey',
+        title: 'Journey — Abdullah Ibn Yousuf',
+        description: 'Fly through Abdullah Ibn Yousuf\'s education, professional experience, and national hackathon achievements.',
     },
     gallery: {
         path: '/gallery',
@@ -31,9 +33,9 @@ export const ROOM_META = Object.freeze({
         description: 'Explore Abdullah Ibn Yousuf\'s featured work: Nafah Agro, AgentLens, MessManage, CareerPilot, and the Office Energy Dashboard.',
     },
     studio: {
-        path: '/studio',
-        title: 'The Studio — Abdullah Ibn Yousuf',
-        description: 'Explore Abdullah Ibn Yousuf\'s interactive 3D studio with his profile, software and AI capabilities, and technology skills.',
+        path: '/about',
+        title: 'About — Abdullah Ibn Yousuf',
+        description: 'Learn about Abdullah Ibn Yousuf through his interactive dossier, software and AI capabilities, and technology skills.',
     },
     contact: {
         path: '/contact',

@@ -11,10 +11,10 @@ import '../../styles/NavigationUI.scss';
 // Room data for the map - positions are percentages on the map image
 // These positions correspond to the visual elements on the map
 const ROOMS = [
-    { id: 'about', label: 'About', x: 43, y: 38 },      // Paper airplane (left side)
+    { id: 'about', label: 'Journey', x: 43, y: 38 },    // Paper airplane (left side)
     { id: 'gallery', label: 'Gallery', x: 43, y: 72 },  // City buildings (bottom left)
     { id: 'contact', label: 'Contact', x: 57, y: 25 },  // Pier/dock (top right)
-    { id: 'studio', label: 'Studio', x: 57, y: 55 },    // Monitors stack (right side)
+    { id: 'studio', label: 'About', x: 57, y: 55 },     // Dossier and monitors (right side)
 ];
 
 // Pin starting position - the dashed circle at the bottom of the tower
@@ -59,7 +59,7 @@ const NavigationUI = () => {
     };
 
     useEffect(() => {
-        // About (zone: left 10%, top 20%, width 30%, height 35%)
+        // Journey (zone: left 10%, top 20%, width 30%, height 35%)
         // -> X: 10% to 40%, Y: 20% to 55%
         if (paintedMapsRefs.about.current) {
             gsap.to(paintedMapsRefs.about.current, {
@@ -95,7 +95,7 @@ const NavigationUI = () => {
             });
         }
 
-        // Studio (zone: right 15%, bottom 19%, width 25%, height 40%)
+        // About dossier (zone: right 15%, bottom 19%, width 25%, height 40%)
         // -> X: 60% to 85% (since right=15% means left is 100-15-25=60%), Y: 41% to 81% (since bottom=19% means top is 100-19-40=41%)
         if (paintedMapsRefs.studio.current) {
             gsap.to(paintedMapsRefs.studio.current, {
@@ -348,7 +348,7 @@ const NavigationUI = () => {
                                 onFocus={() => setHoveredRoom('about')}
                                 onBlur={() => setHoveredRoom(null)}
                                 onClick={() => handleRoomClick('about')}
-                                aria-label="Teleport to About room"
+                                aria-label="Teleport to Journey room"
                             />
                             <button
                                 type="button"
@@ -378,14 +378,14 @@ const NavigationUI = () => {
                                 onFocus={() => setHoveredRoom('studio')}
                                 onBlur={() => setHoveredRoom(null)}
                                 onClick={() => handleRoomClick('studio')}
-                                aria-label="Teleport to Studio room"
+                                aria-label="Teleport to About room"
                             />
 
                             {/* Permanent Map Text Labels */}
-                            <div className="map-room-label about">ABOUT</div>
-                            <div className="map-room-label gallery">THE<br />GALLERY</div>
+                            <div className="map-room-label about">JOURNEY</div>
+                            <div className="map-room-label gallery">GALLERY</div>
                             <div className="map-room-label contact">CONTACT</div>
-                            <div className="map-room-label studio">THE<br />STUDIO</div>
+                            <div className="map-room-label studio">ABOUT</div>
 
                             {/* Pin slot markers - 4 locations */}
                             {ROOMS.map((room) => (
