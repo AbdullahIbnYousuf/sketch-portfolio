@@ -40,7 +40,7 @@ const FALLBACK_PROJECTS = [
         title: 'NAFAH AGRO',
         front: '/textures/gallery/timberkittyprzod.webp',
         painted: '/textures/gallery/timberkittyprzod_painted.webp',
-        url: 'https://nafah-agro.vercel.app/',
+        url: 'https://github.com/AbdullahIbnYousuf/nafah-agro',
         description: 'A Bangla storefront and sales-management system for an organic-food SME, covering online orders, inventory, physical sales, credit tracking, returns, and analytics.',
         techStack: ['/textures/gallery/reactlogo.webp', '/textures/gallery/jslogo.webp']
     },
@@ -58,7 +58,7 @@ const FALLBACK_PROJECTS = [
         title: 'MESSMANAGE',
         front: '/textures/gallery/bioprzod.webp',
         painted: '/textures/gallery/bioprzod_painted.webp',
-        url: 'https://mess-manage.vercel.app/',
+        url: 'https://github.com/AbdullahIbnYousuf/MessManage',
         description: 'A mobile-first application used daily by a shared student residence to manage meals, shopping, expenses, members, financial records, and monthly settlements.',
         techStack: ['/textures/gallery/reactlogo.webp', '/textures/gallery/tailwindlogo.webp']
     },
@@ -67,7 +67,7 @@ const FALLBACK_PROJECTS = [
         title: 'CAREERPILOT',
         front: '/textures/gallery/youngmultiprzod.webp',
         painted: '/textures/gallery/youngmultiprzod_painted.webp',
-        url: 'https://career-pilot-beige.vercel.app/',
+        url: 'https://github.com/AbdullahIbnYousuf/CareerPilot',
         description: 'An agentic career co-pilot that uses a CV as context to search jobs, score fit, provide grounded guidance, and organize applications, goals, and tasks.',
         techStack: ['/textures/gallery/reactlogo.webp', '/textures/gallery/tailwindlogo.webp']
     },
@@ -76,7 +76,7 @@ const FALLBACK_PROJECTS = [
         title: 'OFFICE ENERGY DASHBOARD',
         front: '/textures/gallery/monetuneprzod.webp',
         painted: '/textures/gallery/monetuneprzod_painted.webp',
-        url: 'https://techathon-preli.vercel.app/',
+        url: 'https://github.com/AbdullahIbnYousuf/Office-Energy-Dashboard',
         description: 'A real-time smart-office dashboard for monitoring and controlling simulated lights and fans across three rooms, with a shared backend, Discord bot, and ESP32 simulation.',
         techStack: ['/textures/gallery/reactlogo.webp', '/textures/gallery/jslogo.webp']
     }

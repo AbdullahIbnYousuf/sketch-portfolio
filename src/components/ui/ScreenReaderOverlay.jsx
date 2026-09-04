@@ -128,7 +128,7 @@ const ScreenReaderOverlay = () => {
                         {currentRoom === 'gallery' && (
                             <div aria-label="Gallery room content">
                                 <h3>My Projects</h3>
-                                <p>Browse through my portfolio projects displayed on paper cards. Click on a project card to see details and visit the live site.</p>
+                                <p>Browse through my portfolio projects displayed on paper cards. Click on a project card to see details and open its GitHub repository.</p>
                                 
                                 {projects && projects.length > 0 && (
                                     <ul>
@@ -136,7 +136,7 @@ const ScreenReaderOverlay = () => {
                                             <li key={i}>
                                                 <h4>{p.title}</h4>
                                                 <p>{p.description}</p>
-                                                {p.url && <a href={p.url}>Visit {p.title}</a>}
+                                                {p.url && <a href={p.url}>Open the {p.title} GitHub repository</a>}
                                             </li>
                                         ))}
                                     </ul>

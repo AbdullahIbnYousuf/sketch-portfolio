@@ -207,6 +207,7 @@ export const STUDIO_TEXTURES = [
     // Dossier and monitor tower
     '/textures/paper-texture.webp',
     '/textures/about/awatarnachmurce.webp',
+    '/textures/studio/phone_front.webp',
     '/textures/studio/monitor_front.webp',
     '/textures/studio/monitor_front_painted.webp',
     '/textures/studio/monitor_back.webp',

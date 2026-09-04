@@ -73,7 +73,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 : [isTablet ? 1.8 : 2.65, TOWER_Y_START, TOWER_Z_START],
             dossierPosition: isMobile
                 ? [0, 2.4, -5.8]
-                : [isTablet ? -2.35 : -3.05, isTablet ? 2.3 : 2.15, -6.8],
+                : [isTablet ? -2.25 : -2.3, isTablet ? 2.3 : 2.15, -6.8],
             dossierScale: isMobile ? 0.4 : isTablet ? 0.58 : 0.72,
             isMobile, // Pass through boolean
             isTablet,
@@ -710,14 +710,19 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 };
 
 // ===========================================
-// DOSSIER BOARD - floating investigation collage beside the capability tower
+// DOSSIER PHONE - minimal identity app beside the capability tower
 // ===========================================
 const DossierBoard = ({ position, scale, disabled, onOpen }) => {
     const { camera } = useThree();
     const dossierRef = useRef();
     const avatarSource = useLoader(TextureLoader, '/textures/about/awatarnachmurce.webp');
-    const paperSource = useLoader(TextureLoader, '/textures/paper-texture.webp');
+    const phoneSource = useLoader(TextureLoader, '/textures/studio/phone_front.webp');
     const statusLightRef = useRef();
+    const isHoveredRef = useRef(false);
+    const targetPositionRef = useRef(new THREE.Vector3());
+    const targetScaleRef = useRef(new THREE.Vector3());
+    const supportsHover = useMemo(() => !isTouchDevice(), []);
+    const basePosition = useMemo(() => new THREE.Vector3(...position), [position]);
 
     const avatarTexture = useMemo(() => {
         const croppedTexture = avatarSource.clone();
@@ -731,23 +736,63 @@ const DossierBoard = ({ position, scale, disabled, onOpen }) => {
         return croppedTexture;
     }, [avatarSource]);
 
-    const paperTexture = useMemo(() => {
-        const texture = paperSource.clone();
+    const phoneTexture = useMemo(() => {
+        const texture = phoneSource.clone();
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.needsUpdate = true;
         return texture;
-    }, [paperSource]);
+    }, [phoneSource]);
 
     useEffect(() => () => {
         avatarTexture.dispose();
-        paperTexture.dispose();
-    }, [avatarTexture, paperTexture]);
+        phoneTexture.dispose();
+    }, [avatarTexture, phoneTexture]);
 
-    useFrame(({ clock }) => {
-        const elapsed = clock.getElapsedTime();
+    useEffect(() => {
+        if (!disabled) return;
+        isHoveredRef.current = false;
+        document.body.style.cursor = 'auto';
+    }, [disabled]);
+
+    useEffect(() => () => {
+        document.body.style.cursor = 'auto';
+    }, []);
+
+    useFrame((state, delta) => {
+        const elapsed = state.clock.getElapsedTime();
         if (statusLightRef.current) {
             statusLightRef.current.material.opacity = 0.55 + Math.sin(elapsed * 3.4) * 0.35;
         }
+
+        if (!dossierRef.current) return;
+
+        const hoverStrength = supportsHover && isHoveredRef.current && !disabled ? 1 : 0;
+        const idleStrength = disabled ? 0 : 1;
+        const smoothing = 1 - Math.exp(-delta * (hoverStrength ? 8 : 4));
+
+        targetPositionRef.current.copy(basePosition);
+        targetPositionRef.current.x += Math.cos(elapsed * 0.55) * 0.035 * idleStrength;
+        targetPositionRef.current.y += Math.sin(elapsed * 0.9) * 0.11 * idleStrength;
+        targetPositionRef.current.z += Math.cos(elapsed * 0.7) * 0.055 * idleStrength + hoverStrength * 0.22;
+        dossierRef.current.position.lerp(targetPositionRef.current, smoothing);
+
+        const targetRotationX = hoverStrength
+            ? -state.pointer.y * 0.14
+            : Math.sin(elapsed * 0.5) * 0.012 * idleStrength;
+        const targetRotationY = hoverStrength
+            ? state.pointer.x * 0.14
+            : Math.cos(elapsed * 0.42) * 0.016 * idleStrength;
+        const targetRotationZ = hoverStrength
+            ? -state.pointer.x * 0.025
+            : Math.sin(elapsed * 0.65) * 0.01 * idleStrength;
+
+        dossierRef.current.rotation.x = THREE.MathUtils.lerp(dossierRef.current.rotation.x, targetRotationX, smoothing);
+        dossierRef.current.rotation.y = THREE.MathUtils.lerp(dossierRef.current.rotation.y, targetRotationY, smoothing);
+        dossierRef.current.rotation.z = THREE.MathUtils.lerp(dossierRef.current.rotation.z, targetRotationZ, smoothing);
+
+        const hoverScale = scale * (1 + hoverStrength * 0.035);
+        targetScaleRef.current.setScalar(hoverScale);
+        dossierRef.current.scale.lerp(targetScaleRef.current, smoothing);
     });
 
     const handleOpen = (event) => {
@@ -773,160 +818,139 @@ const DossierBoard = ({ position, scale, disabled, onOpen }) => {
             ref={dossierRef}
             position={position}
             scale={scale}
-            onClick={handleOpen}
-            onPointerOver={(event) => {
-                event.stopPropagation();
-                if (!disabled) document.body.style.cursor = 'pointer';
-            }}
-            onPointerOut={() => {
-                document.body.style.cursor = 'auto';
-            }}
         >
-            {/* Cyan evidence threads sit behind the pinned notes. */}
-            <EvidenceLine from={[-0.08, 0.42]} to={[-0.12, 0.34]} />
-            <EvidenceLine from={[-0.05, -0.28]} to={[0.08, -0.38]} />
-            <EvidenceLine from={[0.08, -1.3]} to={[-0.08, -1.46]} />
-
-            {/* Paper strip identifying the investigation board. */}
-            <group position={[0, 2.15, 0]} rotation={[0, 0, -0.015]}>
-                <mesh position={[0.04, -0.035, 0.18]} renderOrder={5}>
-                    <planeGeometry args={[2.85, 0.34]} />
-                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.14} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 0, 0.2]} renderOrder={6}>
-                    <planeGeometry args={[2.85, 0.34]} />
-                    <meshBasicMaterial color="#f6efda" map={paperTexture} depthWrite={false} />
-                </mesh>
-                <Text position={[-1.27, 0, 0.23]} fontSize={0.105} color="#1a1a1a" anchorX="left" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
-                    SUBJECT FILE // AIY-01
-                </Text>
-                <Text position={[1.05, 0, 0.23]} fontSize={0.09} color="#087f91" anchorX="right" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
-                    ACTIVE
-                </Text>
-                <mesh ref={statusLightRef} position={[1.2, 0, 0.24]} renderOrder={9}>
-                    <circleGeometry args={[0.055, 20]} />
-                    <meshBasicMaterial color="#00d9ff" transparent opacity={0.9} depthWrite={false} />
-                </mesh>
-            </group>
-
-            {/* Passport portrait pinned to its own paper card. */}
-            <group position={[0, 1.22, 0]} rotation={[0, 0, -0.045]}>
-                <mesh position={[0.055, -0.055, 0.18]} renderOrder={5}>
-                    <planeGeometry args={[1.55, 1.7]} />
-                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 0, 0.2]} renderOrder={6}>
-                    <planeGeometry args={[1.55, 1.7]} />
-                    <meshBasicMaterial color="#f8f2df" map={paperTexture} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 0.1, 0.225]} renderOrder={7}>
-                    <planeGeometry args={[1.03, 1.22]} />
-                    <meshBasicMaterial color="#d6ecea" />
-                </mesh>
-                <mesh position={[0, 0.1, 0.235]} renderOrder={8}>
-                    <planeGeometry args={[0.93, 1.15]} />
-                    <meshBasicMaterial map={avatarTexture} transparent depthWrite={false} side={THREE.DoubleSide} />
-                </mesh>
-                <Text position={[0, -0.68, 0.235]} fontSize={0.105} color="#1a1a1a" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
-                    PHOTO // MATCH 98%
-                </Text>
-                <mesh position={[0, 0.8, 0.25]} renderOrder={9}>
-                    <circleGeometry args={[0.075, 24]} />
-                    <meshBasicMaterial color="#00a9bf" depthWrite={false} />
-                </mesh>
-            </group>
-
-            {/* Separate pinned identity slip. */}
-            <group position={[-0.12, 0.02, 0]} rotation={[0, 0, 0.025]}>
-                <mesh position={[0.045, -0.045, 0.18]} renderOrder={5}>
-                    <planeGeometry args={[2.82, 0.84]} />
-                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 0, 0.2]} renderOrder={6}>
-                    <planeGeometry args={[2.82, 0.84]} />
-                    <meshBasicMaterial color="#fcf3c6" map={paperTexture} depthWrite={false} />
-                </mesh>
-                <Text position={[-1.2, 0.22, 0.235]} fontSize={0.085} color="#087f91" anchorX="left" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
-                    IDENTITY CONFIRMED
-                </Text>
-                <Text position={[-1.2, -0.1, 0.235]} fontSize={0.215} color="#1a1a1a" anchorX="left" anchorY="middle" maxWidth={2.45} font="/fonts/RubikScribble-Regular.ttf" renderOrder={8}>
-                    ABDULLAH IBN YOUSUF
-                </Text>
-                <mesh position={[1.14, 0.28, 0.25]} renderOrder={9}>
-                    <circleGeometry args={[0.065, 24]} />
-                    <meshBasicMaterial color="#00a9bf" depthWrite={false} />
-                </mesh>
-            </group>
-
-            {/* Role and short biography gathered on a second note. */}
-            <group position={[0.08, -0.88, 0]} rotation={[0, 0, -0.018]}>
-                <mesh position={[0.05, -0.045, 0.18]} renderOrder={5}>
-                    <planeGeometry args={[3, 1.02]} />
-                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 0, 0.2]} renderOrder={6}>
-                    <planeGeometry args={[3, 1.02]} />
-                    <meshBasicMaterial color="#f5eed8" map={paperTexture} depthWrite={false} />
-                </mesh>
-                <Text position={[-1.3, 0.29, 0.235]} fontSize={0.12} color="#1a1a1a" anchorX="left" anchorY="middle" maxWidth={2.6} font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
-                    CSE STUDENT · SOFTWARE & AI DEVELOPER
-                </Text>
-                <Text position={[-1.3, 0.02, 0.235]} fontSize={0.095} color="#34484b" anchorX="left" anchorY="top" maxWidth={2.6} lineHeight={1.22} font="/fonts/CabinSketch-Regular.ttf" renderOrder={8}>
-                    {'Builds practical products, backend systems,\nand AI-assisted applications for real problems.'}
-                </Text>
-                <mesh position={[-1.2, 0.43, 0.25]} renderOrder={9}>
-                    <circleGeometry args={[0.06, 24]} />
-                    <meshBasicMaterial color="#00a9bf" depthWrite={false} />
-                </mesh>
-            </group>
-
-            {/* Location and availability clipped along the bottom. */}
-            <group position={[-0.08, -1.68, 0]} rotation={[0, 0, 0.018]}>
-                <mesh position={[0.04, -0.035, 0.18]} renderOrder={5}>
-                    <planeGeometry args={[2.92, 0.5]} />
-                    <meshBasicMaterial color="#1a1a1a" transparent opacity={0.15} depthWrite={false} />
-                </mesh>
-                <mesh position={[0, 0, 0.2]} renderOrder={6}>
-                    <planeGeometry args={[2.92, 0.5]} />
-                    <meshBasicMaterial color="#eaf5ef" map={paperTexture} depthWrite={false} />
-                </mesh>
-                <Text position={[-1.24, 0, 0.235]} fontSize={0.095} color="#1a1a1a" anchorX="left" anchorY="middle" maxWidth={2.48} font="/fonts/CabinSketch-Bold.ttf" renderOrder={8}>
-                    GAZIPUR · IUT CSE · OPEN TO OPPORTUNITIES
-                </Text>
-            </group>
-
-            <mesh position={[0.35, -2.1, 0.22]} rotation={[0, 0, -0.02]} renderOrder={7}>
-                <planeGeometry args={[1.5, 0.3]} />
-                <meshBasicMaterial color="#9fe8ef" map={paperTexture} depthWrite={false} />
+            {/* Original ITOM portrait phone display, enlarged into an identity app. */}
+            <mesh position={[0.08, 0.42, 0.04]} renderOrder={2}>
+                <planeGeometry args={[3.5, 7]} />
+                <meshBasicMaterial color="#1a1a1a" transparent opacity={0.14} depthWrite={false} />
             </mesh>
-            <Text position={[0.35, -2.1, 0.25]} fontSize={0.115} color="#1a1a1a" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={9}>
-                OPEN FULL FILE →
+            <mesh position={[0, 0.5, 0.06]} renderOrder={3}>
+                <planeGeometry args={[3.5, 7]} />
+                <meshBasicMaterial map={phoneTexture} color="#f7f0da" depthWrite={false} />
+            </mesh>
+
+            {/* Flat application canvas contained within the phone's printed screen. */}
+            <mesh position={[0, 0.5, 0.08]} renderOrder={4}>
+                <planeGeometry args={[3.02, 5.52]} />
+                <meshBasicMaterial color="#f8f4e8" depthWrite={false} />
+            </mesh>
+
+            {/* Mobile status bar. */}
+            <Text position={[-1.32, 3.08, 0.12]} fontSize={0.085} color="#1a1a1a" anchorX="left" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                09:41
+            </Text>
+            {[0.035, 0.06, 0.085].map((height, index) => (
+                <mesh key={height} position={[0.98 + index * 0.075, 3.055 + height / 2, 0.12]} renderOrder={6}>
+                    <planeGeometry args={[0.04, height]} />
+                    <meshBasicMaterial color="#1a1a1a" depthWrite={false} />
+                </mesh>
+            ))}
+            <mesh position={[1.31, 3.08, 0.12]} renderOrder={6}>
+                <planeGeometry args={[0.29, 0.12]} />
+                <meshBasicMaterial color="#1a1a1a" depthWrite={false} />
+            </mesh>
+            <mesh position={[1.285, 3.08, 0.13]} renderOrder={7}>
+                <planeGeometry args={[0.205, 0.07]} />
+                <meshBasicMaterial color="#9fe8ef" depthWrite={false} />
+            </mesh>
+
+            {/* Identity application header. */}
+            <Text position={[-1.32, 2.72, 0.12]} fontSize={0.16} color="#1a1a1a" anchorX="left" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                MY IDENTITY
+            </Text>
+            <Text position={[1.12, 2.72, 0.12]} fontSize={0.085} color="#087f91" anchorX="right" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                ACTIVE
+            </Text>
+            <mesh ref={statusLightRef} position={[1.27, 2.72, 0.13]} renderOrder={7}>
+                <circleGeometry args={[0.055, 24]} />
+                <meshBasicMaterial color="#00d9ff" transparent opacity={0.9} depthWrite={false} />
+            </mesh>
+            <mesh position={[0, 2.48, 0.11]} renderOrder={5}>
+                <planeGeometry args={[2.66, 0.018]} />
+                <meshBasicMaterial color="#1a1a1a" transparent opacity={0.22} depthWrite={false} />
+            </mesh>
+
+            {/* Circular identity portrait. */}
+            <mesh position={[0, 1.55, 0.11]} renderOrder={5}>
+                <circleGeometry args={[0.82, 64]} />
+                <meshBasicMaterial color="#9fe8ef" depthWrite={false} />
+            </mesh>
+            <mesh position={[0, 1.55, 0.12]} renderOrder={6}>
+                <circleGeometry args={[0.735, 64]} />
+                <meshBasicMaterial map={avatarTexture} color="#ffffff" transparent alphaTest={0.02} depthWrite={false} side={THREE.DoubleSide} />
+            </mesh>
+            <mesh position={[0.59, 1.02, 0.14]} renderOrder={8}>
+                <circleGeometry args={[0.11, 32]} />
+                <meshBasicMaterial color="#f8f4e8" depthWrite={false} />
+            </mesh>
+            <mesh position={[0.59, 1.02, 0.15]} renderOrder={9}>
+                <circleGeometry args={[0.072, 32]} />
+                <meshBasicMaterial color="#00a9bf" depthWrite={false} />
+            </mesh>
+
+            {/* Primary identity information. */}
+            <Text position={[0, 0.52, 0.12]} fontSize={0.255} color="#1a1a1a" anchorX="center" anchorY="middle" maxWidth={2.65} lineHeight={1.04} textAlign="center" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                {'ABDULLAH IBN\nYOUSUF'}
+            </Text>
+            <Text position={[0, 0.02, 0.12]} fontSize={0.095} color="#087f91" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                ● IDENTITY CONFIRMED
+            </Text>
+            <Text position={[0, -0.34, 0.12]} fontSize={0.078} color="#596568" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                CURRENT STATUS
+            </Text>
+            <Text position={[0, -0.69, 0.12]} fontSize={0.13} color="#1a1a1a" anchorX="center" anchorY="middle" maxWidth={2.45} lineHeight={1.18} textAlign="center" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                {'OPEN TO COLLABORATION\n& OPPORTUNITIES'}
             </Text>
 
-            {/* Wide transparent hit target makes the whole dossier collage clickable. */}
-            <mesh position={[0, 0.05, 0.3]} renderOrder={10}>
-                <planeGeometry args={[3.35, 4.7]} />
+            {/* One clear primary action opens the existing full dossier overlay. */}
+            <mesh position={[0, -1.35, 0.11]} renderOrder={5}>
+                <planeGeometry args={[2.48, 0.52]} />
+                <meshBasicMaterial color="#9fe8ef" depthWrite={false} />
+            </mesh>
+            <Text position={[0, -1.35, 0.13]} fontSize={0.125} color="#1a1a1a" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={7}>
+                VIEW FULL PROFILE →
+            </Text>
+
+            {/* Minimal bottom navigation and gesture indicator complete the app shell. */}
+            <mesh position={[0, -1.79, 0.11]} renderOrder={5}>
+                <planeGeometry args={[2.66, 0.018]} />
+                <meshBasicMaterial color="#1a1a1a" transparent opacity={0.16} depthWrite={false} />
+            </mesh>
+            <Text position={[-0.9, -2.02, 0.12]} fontSize={0.075} color="#7b8180" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                HOME
+            </Text>
+            <Text position={[0, -2.02, 0.12]} fontSize={0.075} color="#7b8180" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                WORK
+            </Text>
+            <Text position={[0.9, -2.02, 0.12]} fontSize={0.075} color="#087f91" anchorX="center" anchorY="middle" font="/fonts/CabinSketch-Bold.ttf" renderOrder={6}>
+                PROFILE
+            </Text>
+            <mesh position={[0.9, -2.16, 0.13]} renderOrder={7}>
+                <planeGeometry args={[0.46, 0.035]} />
+                <meshBasicMaterial color="#00a9bf" depthWrite={false} />
+            </mesh>
+
+            {/* One stable hit surface drives hover and click across the complete phone. */}
+            <mesh
+                position={[0, 0.5, 0.3]}
+                renderOrder={10}
+                onClick={handleOpen}
+                onPointerEnter={(event) => {
+                    event.stopPropagation();
+                    if (disabled || !supportsHover) return;
+                    isHoveredRef.current = true;
+                    document.body.style.cursor = 'pointer';
+                }}
+                onPointerLeave={(event) => {
+                    event.stopPropagation();
+                    isHoveredRef.current = false;
+                    document.body.style.cursor = 'auto';
+                }}
+            >
+                <planeGeometry args={[3.5, 7]} />
                 <meshBasicMaterial transparent opacity={0.001} depthWrite={false} />
             </mesh>
         </group>
-    );
-};
-
-const EvidenceLine = ({ from, to }) => {
-    const deltaX = to[0] - from[0];
-    const deltaY = to[1] - from[1];
-    const length = Math.hypot(deltaX, deltaY);
-    const angle = Math.atan2(deltaY, deltaX);
-
-    return (
-        <mesh
-            position={[(from[0] + to[0]) / 2, (from[1] + to[1]) / 2, 0.185]}
-            rotation={[0, 0, angle]}
-            renderOrder={5}
-        >
-            <planeGeometry args={[length, 0.025]} />
-            <meshBasicMaterial color="#00a9bf" transparent opacity={0.65} depthWrite={false} />
-        </mesh>
     );
 };
 
@@ -1144,104 +1168,21 @@ const ScreenTextDetails = ({ item }) => {
     // Rendering dynamic 3D text over custom graphics causes text overlap.
     if (item.frontTexture) return null;
 
-    const isPhone = item.width < 0.8;
-
-    if (isPhone) {
-        return (
-            <group position={[0, 0, item.depth / 2 + 0.02]}>
-                <Text
-                    position={[0, item.height * 0.36, 0]}
-                    fontSize={0.052}
-                    color="#1a1a1a"
-                    anchorX="center"
-                    anchorY="top"
-                    maxWidth={item.width * 0.85}
-                    font="/fonts/CabinSketch-Bold.ttf"
-                >
-                    {`✦ ${item.platformConfig?.label?.toUpperCase() || 'MICRO MOTION'}`}
-                </Text>
-                <Text
-                    position={[0, item.height * 0.22, 0]}
-                    fontSize={0.062}
-                    color="#1a1a1a"
-                    anchorX="center"
-                    anchorY="top"
-                    maxWidth={item.width * 0.85}
-                    maxLines={2}
-                    font="/fonts/CabinSketch-Bold.ttf"
-                    lineHeight={1.1}
-                >
-                    {item.title}
-                </Text>
-                <Text
-                    position={[0, -item.height * 0.14, 0]}
-                    fontSize={0.042}
-                    color="#1a1a1a"
-                    anchorX="center"
-                    anchorY="top"
-                    maxWidth={item.width * 0.82}
-                    maxLines={3}
-                    font="/fonts/CabinSketch-Regular.ttf"
-                    lineHeight={1.2}
-                >
-                    {item.description}
-                </Text>
-            </group>
-        );
-    }
-
     return (
         <group position={[0, 0, item.depth / 2 + 0.02]}>
             <Text
-                position={[-item.width * 0.44, item.height * 0.36, 0]}
-                fontSize={item.width * 0.048}
-                color="#1a1a1a"
-                anchorX="left"
-                anchorY="top"
-                font="/fonts/CabinSketch-Bold.ttf"
-            >
-                {`✦ ${item.platformConfig?.label?.toUpperCase() || 'CASE STUDY'} // ${item.date || ''}`}
-            </Text>
-
-            <Text
-                position={[-item.width * 0.44, item.height * 0.22, 0]}
-                fontSize={item.width * 0.055}
-                color="#1a1a1a"
-                anchorX="left"
-                anchorY="top"
-                maxWidth={item.width * 0.54}
-                maxLines={2}
-                font="/fonts/CabinSketch-Bold.ttf"
-                lineHeight={1.1}
-            >
-                {item.title}
-            </Text>
-
-            <Text
-                position={[-item.width * 0.44, -item.height * 0.08, 0]}
-                fontSize={item.width * 0.037}
-                color="#1a1a1a"
-                anchorX="left"
-                anchorY="top"
-                maxWidth={item.width * 0.82}
-                maxLines={2}
-                font="/fonts/CabinSketch-Regular.ttf"
-                lineHeight={1.2}
-            >
-                {item.description}
-            </Text>
-
-            <Text
-                position={[0, -item.height * 0.34, 0.002]}
-                fontSize={item.width * 0.035}
+                position={[0, 0.035, 0]}
+                fontSize={item.width * 0.075}
                 color="#1a1a1a"
                 anchorX="center"
                 anchorY="middle"
-                maxWidth={item.width * 0.82}
-                maxLines={1}
+                maxWidth={item.width * 0.78}
+                maxLines={2}
                 font="/fonts/CabinSketch-Bold.ttf"
+                lineHeight={1.15}
+                textAlign="center"
             >
-                {item.skills?.slice(0, 3).join(' · ')}
+                {item.title}
             </Text>
 
             {/* Covers the original template-owner mark on the monitor bezel. */}
@@ -1249,16 +1190,6 @@ const ScreenTextDetails = ({ item }) => {
                 <planeGeometry args={[item.width * 0.42, item.height * 0.085]} />
                 <meshBasicMaterial color="#fcf3c6" />
             </mesh>
-            <Text
-                position={[0, -item.height * 0.465, 0.002]}
-                fontSize={item.width * 0.032}
-                color="#1a1a1a"
-                anchorX="center"
-                anchorY="middle"
-                font="/fonts/CabinSketch-Bold.ttf"
-            >
-                ABDULLAH
-            </Text>
         </group>
     );
 };
