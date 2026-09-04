@@ -167,10 +167,10 @@ const Cloud = ({
             materialRef.current.opacity = worldZ > CORRIDOR_CLIP_Z ? 0 : baseOpacity;
         }
 
-        // Billboard effect - always face camera, turned 90° left
-        const offsetRotation = new THREE.Euler(0, -Math.PI / 3, 0);
-        const offsetQuaternion = new THREE.Quaternion().setFromEuler(offsetRotation);
-        meshRef.current.quaternion.copy(camera.quaternion).multiply(offsetQuaternion);
+        // Face the cloud toward the camera's actual world position. Copying the
+        // camera quaternion only keeps planes parallel to the screen; nearby
+        // clouds pushed toward the sides can still be viewed nearly edge-on.
+        meshRef.current.lookAt(camera.position);
     });
 
     return (
