@@ -90,7 +90,10 @@ const ScreenReaderOverlay = () => {
 
                                 <section>
                                     <h4>Education</h4>
-                                    <p>{EDUCATION_ENTRY.role}, {EDUCATION_ENTRY.title}. {EDUCATION_ENTRY.period}.</p>
+                                    <h5>{EDUCATION_ENTRY.title}</h5>
+                                    <p>{EDUCATION_ENTRY.role}</p>
+                                    <p>{EDUCATION_ENTRY.period}. {EDUCATION_ENTRY.location}. {EDUCATION_ENTRY.status}.</p>
+                                    <p>{EDUCATION_ENTRY.summary}</p>
                                     <button type="button" onClick={() => openOverlay(EDUCATION_ENTRY)}>
                                         Open education details
                                     </button>
@@ -101,7 +104,9 @@ const ScreenReaderOverlay = () => {
                                     <ul>
                                         {EXPERIENCE_ENTRIES.map((entry) => (
                                             <li key={entry.id}>
-                                                <p>{entry.role}, {entry.title}. {entry.period}.</p>
+                                                <h5>{entry.role}</h5>
+                                                <p>{entry.title}. {entry.type}. {entry.period}{entry.location ? `. ${entry.location}` : ''}.</p>
+                                                <p>{entry.summary}</p>
                                                 <button type="button" onClick={() => openOverlay(entry)}>
                                                     Open {entry.title} experience
                                                 </button>
@@ -115,9 +120,13 @@ const ScreenReaderOverlay = () => {
                                     <ul>
                                         {ACHIEVEMENT_ENTRIES.map((entry) => (
                                             <li key={entry.id}>
-                                                <p>{entry.role} — {entry.title}. {entry.period}.</p>
+                                                <h5>{entry.title}</h5>
+                                                <p>{entry.event}. {entry.period}. {entry.summary}</p>
+                                                {entry.relatedProject && (
+                                                    <p>Related project: {entry.relatedProject.title}. {entry.relatedProject.body}</p>
+                                                )}
                                                 <button type="button" onClick={() => openOverlay(entry)}>
-                                                    Open {entry.title} achievement
+                                                    Open {entry.title} details
                                                 </button>
                                             </li>
                                         ))}

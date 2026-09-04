@@ -133,6 +133,84 @@
     line-height: 1.55;
 }
 
+// Resume-like hierarchy for Journey entries. Dates, organizations, locations,
+// and study status are content—not tags—so they stay as normal reading lines.
+.journey-entry-identity {
+    position: relative;
+    padding: 0.1rem 0 0.8rem 0.85rem;
+    border-bottom: 1px dashed #9a9a9a;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0.2rem;
+        bottom: 0.8rem;
+        left: 0;
+        width: 3px;
+        background: #29aabd;
+        transform: rotate(-1deg);
+    }
+}
+
+.journey-entry-organization {
+    margin: 0;
+    color: #111111;
+    font-family: 'Cabin Sketch', cursive;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.journey-entry-type,
+.journey-entry-period,
+.journey-entry-location {
+    margin: 0.22rem 0 0;
+    color: #424242;
+    font-size: 0.86rem;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.journey-entry-type {
+    color: #202020;
+    font-weight: 700;
+}
+
+.journey-entry-location {
+    color: #5b5b5b;
+}
+
+.journey-entry-section-label {
+    display: block;
+    margin-bottom: 0.3rem;
+    color: #087f91;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.journey-entry-summary {
+    margin: 0;
+    color: #1a1a1a;
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1.52;
+}
+
+.journey-entry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    span {
+        padding: 0.4rem 0.65rem;
+        background: #fff8cf;
+        border: 1.5px solid #1a1a1a;
+        box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.1);
+        font-weight: 700;
+    }
+}
+
 @media (max-width: 767px) {
     .paper-detail-scroll {
         padding-right: 0.25rem;
@@ -140,6 +218,10 @@
 
     .paper-detail-heading {
         font-size: 1.1rem;
+    }
+
+    .journey-entry-organization {
+        font-size: 1.08rem;
     }
 }
 

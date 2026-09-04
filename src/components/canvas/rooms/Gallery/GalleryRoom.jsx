@@ -73,7 +73,7 @@ const FALLBACK_PROJECTS = [
     },
     {
         id: 'office-energy-dashboard',
-        title: 'OFFICE ENERGY DASHBOARD',
+        title: 'OFFICE ENERGY',
         front: '/textures/gallery/monetuneprzod.webp',
         painted: '/textures/gallery/monetuneprzod_painted.webp',
         url: 'https://github.com/AbdullahIbnYousuf/Office-Energy-Dashboard',

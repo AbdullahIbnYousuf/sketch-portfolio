@@ -71,6 +71,10 @@ const GlobalOverlay = () => {
 const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
     const label = content.platformConfig?.label || 'Content';
     const cardOnLeft = !isMobile && content.overlaySide === 'left';
+    const isExperienceEntry = content.layout === 'journey_entry' && content.category === 'Experience';
+    const isEducationEntry = content.layout === 'journey_entry' && content.category === 'Education';
+    const isAchievementEntry = content.layout === 'journey_entry' && content.category === 'Achievement';
+    const displayTitle = isExperienceEntry ? content.role : content.title;
 
     // GSAP TextPlugin typing effect for description
     const descriptionRef = useRef(null);
@@ -417,7 +421,7 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                 fontFamily: "'Cabin Sketch', cursive", // High-contrast solid black font
                                 overflowWrap: 'anywhere',
                             }}>
-                                {content.title}
+                                {displayTitle}
                             </h2>
                         </div>
 
@@ -614,38 +618,43 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                                 ...getStaggerStyle(180)
                             }}
                         >
-                            <div style={{
-                                display: 'flex',
-                                flexWrap: 'wrap',
-                                gap: '0.55rem',
-                                paddingBottom: '0.65rem',
-                                borderBottom: '1px dashed #9a9a9a'
-                            }}>
-                                {[content.role, content.period, content.location, content.status, content.event]
-                                    .filter(Boolean)
-                                    .map((item) => (
-                                        <span key={item} style={{
-                                            padding: '0.35rem 0.65rem',
-                                            backgroundColor: '#e8f8fb',
-                                            border: '1px solid #1a1a1a',
-                                            borderRadius: '2px 12px 3px 10px',
-                                            fontSize: '0.78rem',
-                                            fontWeight: 700
-                                        }}>
-                                            {item}
-                                        </span>
-                                    ))}
+                            <div className="journey-entry-identity">
+                                {isExperienceEntry && (
+                                    <>
+                                        <h3 className="journey-entry-organization">{content.title}</h3>
+                                        {content.type && <p className="journey-entry-type">{content.type}</p>}
+                                    </>
+                                )}
+
+                                {isEducationEntry && (
+                                    <h3 className="journey-entry-organization">{content.role}</h3>
+                                )}
+
+                                {isAchievementEntry && content.event && (
+                                    <h3 className="journey-entry-organization">{content.event}</h3>
+                                )}
+
+                                {content.period && (
+                                    <p className="journey-entry-period">{content.period}</p>
+                                )}
+
+                                {(content.location || content.status) && (
+                                    <p className="journey-entry-location">
+                                        {[content.location, content.status].filter(Boolean).join(' · ')}
+                                    </p>
+                                )}
                             </div>
 
-                            <p style={{
-                                lineHeight: 1.5,
-                                color: '#1a1a1a',
-                                fontWeight: 700,
-                                fontSize: '1rem',
-                                margin: 0
-                            }}>
-                                {content.summary}
-                            </p>
+                            <section>
+                                <span className="journey-entry-section-label">
+                                    {isEducationEntry
+                                        ? 'PROGRAM OVERVIEW'
+                                        : isExperienceEntry
+                                            ? 'ABOUT THE ROLE'
+                                            : 'ACHIEVEMENT OVERVIEW'}
+                                </span>
+                                <p className="journey-entry-summary">{content.summary}</p>
+                            </section>
 
                             {content.details?.map((section) => (
                                 <section key={section.title}>
@@ -659,22 +668,56 @@ const ContentCard = ({ content, isOpen, onClose, isMobile }) => {
                             ))}
 
                             {content.highlights?.length > 0 && (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.55rem' }}>
-                                    {content.highlights.map((highlight) => (
-                                        <span key={highlight} style={{
-                                            padding: '0.45rem 0.7rem',
-                                            backgroundColor: '#fff8cf',
-                                            border: '1.5px solid #1a1a1a',
-                                            boxShadow: '2px 2px 0 rgba(0,0,0,0.1)',
-                                            fontWeight: 700
-                                        }}>
-                                            {highlight}
-                                        </span>
-                                    ))}
-                                </div>
+                                <section>
+                                    <span className="journey-entry-section-label">
+                                        {isExperienceEntry ? 'FOCUS AREAS' : 'AT A GLANCE'}
+                                    </span>
+                                    <div className="journey-entry-tags">
+                                        {content.highlights.map((highlight) => (
+                                            <span key={highlight}>{highlight}</span>
+                                        ))}
+                                    </div>
+                                </section>
                             )}
 
-                            {content.url && (
+                            {content.relatedProject && (
+                                <section style={{
+                                    marginTop: '0.2rem',
+                                    paddingTop: '0.9rem',
+                                    borderTop: '1px dashed #9a9a9a',
+                                }}>
+                                    <span style={{
+                                        display: 'block',
+                                        marginBottom: '0.25rem',
+                                        color: '#087f91',
+                                        fontSize: '0.72rem',
+                                        fontWeight: 800,
+                                        letterSpacing: '1px',
+                                    }}>
+                                        RELATED PROJECT
+                                    </span>
+                                    <h3 className="paper-detail-heading" style={{ marginTop: 0 }}>
+                                        {content.relatedProject.title}
+                                    </h3>
+                                    <p className="paper-detail-body">
+                                        {content.relatedProject.body}
+                                    </p>
+                                    {content.url && (
+                                        <div style={{ marginTop: '0.8rem' }}>
+                                            <a
+                                                href={content.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="studio-action-button"
+                                            >
+                                                {content.linkLabel || 'Open Project'} ↗
+                                            </a>
+                                        </div>
+                                    )}
+                                </section>
+                            )}
+
+                            {content.url && !content.relatedProject && (
                                 <div style={{ marginTop: '0.1rem', paddingTop: '0.2rem' }}>
                                     <a
                                         href={content.url}
