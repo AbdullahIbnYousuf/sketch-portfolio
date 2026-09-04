@@ -1,6 +1,6 @@
 import { useState, Suspense, useEffect, useCallback, lazy } from 'react';
-import { Canvas, useThree, useLoader } from '@react-three/fiber';
-import { Preload, useTexture } from '@react-three/drei';
+import { Canvas } from '@react-three/fiber';
+import { PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 
 import Preloader from './components/dom/Preloader';
@@ -13,23 +13,13 @@ import NavigationUI from './components/ui/NavigationUI';
 import GlobalOverlay from './components/ui/GlobalOverlay';
 import ScreenReaderOverlay from './components/ui/ScreenReaderOverlay';
 import { useDocumentMeta } from './hooks/useDocumentMeta';
+import { detectPerformanceTier } from './config/performanceConfig';
+import { preloadInitialAssets } from './utils/assetPreloader';
 
 // Lazy load the heavy 3D experience
 const Experience = lazy(() => import('./components/canvas/Experience'));
 
 import './styles/main.scss';
-
-import { 
-  ENTRANCE_TEXTURES, 
-  CORRIDOR_TEXTURES, 
-  UI_TEXTURES,
-  PRELOAD_ALL, 
-  PRELOAD_LOADER,
-  ABOUT_TEXTURES,
-  IMAGE_ASSETS,
-  filterTexturesByDevice
-} from './config/texturePreloadList';
-import { TextureLoader } from 'three';
 
 // Standard Browser-level Image Preloader (for <img> tags)
 const preloadBrowserImage = (path) => {
@@ -38,24 +28,10 @@ const preloadBrowserImage = (path) => {
   img.src = path;
 };
 
-const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent || '');
-const isWeakCPU = typeof navigator.hardwareConcurrency !== 'undefined' && navigator.hardwareConcurrency <= 4;
-const isLowRAM = typeof navigator.deviceMemory !== 'undefined' && navigator.deviceMemory <= 4;
-const isSmallScreen = typeof window !== 'undefined' && window.innerWidth < 450;
-const isLowEnd = isMobileDevice || isWeakCPU || isLowRAM || isSmallScreen;
-
-const supportsHover = typeof window !== 'undefined' && window.matchMedia('(hover: hover)').matches;
-
-// Preload ALL textures across all scenes & rooms during initial preloader screen
-const ALL_TEXTURES = [...PRELOAD_ALL, ...PRELOAD_LOADER];
-const filteredAll = filterTexturesByDevice(ALL_TEXTURES, supportsHover);
-filteredAll.forEach(path => {
-  try {
-    useTexture.preload(path);
-    useLoader.preload(TextureLoader, path);
-  } catch (e) {
-    // Ignore invalid paths
-  }
+const initialPerformanceTier = detectPerformanceTier();
+const initialPreloadPlan = preloadInitialAssets({
+  tier: initialPerformanceTier,
+  pathname: typeof window !== 'undefined' ? window.location.pathname : '/',
 });
 
 // Helper component to handle global audio enable on interaction
@@ -93,7 +69,7 @@ function DocumentMetaBridge() {
 function AppContent() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [sceneReady, setSceneReady] = useState(false);
-  const { settings, downgradeTier, tier } = usePerformance();
+  const { settings, downgradeTier } = usePerformance();
 
   useEffect(() => {
     initAudio();
@@ -121,30 +97,32 @@ function AppContent() {
                 far: 150
               }}
               gl={{
-                antialias: true,
+                antialias: settings.antialias,
                 alpha: false,
-                powerPreference: "high-performance",
+                powerPreference: settings.powerPreference,
                 localClippingEnabled: true,
                 failIfMajorPerformanceCaveat: false
               }}
-              onCreated={({ gl, scene }) => {
-                const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
+              onCreated={({ gl }) => {
                 gl.outputColorSpace = THREE.SRGBColorSpace;
-                gl.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
               }}
-              dpr={[1, Math.min(typeof window !== 'undefined' ? window.devicePixelRatio : 2, 2)]}
+              dpr={settings.dpr}
               shadows={settings.shadows}
             >
               <color attach="background" args={['#fdf8e2']} /> {/* TINTED TO DEEP PURPLE */}
               <fog attach="fog" args={['#fdf8e2', 15, 50]} /> {/* FOG TINTED TO DEEP PURPLE */}
 
+              <PerformanceMonitor
+                flipflops={3}
+                onDecline={downgradeTier}
+                onFallback={downgradeTier}
+              />
+
               <Suspense fallback={null}>
                 <Experience
-                  isLoaded={isLoaded}
                   onSceneReady={handleSceneReady}
-                  performanceTier={tier}
+                  startupPerformanceTier={initialPerformanceTier}
                 />
-                <Preload all />
               </Suspense>
             </Canvas>
           </div>
@@ -174,12 +152,11 @@ import { AchievementsProvider } from './context/AchievementsContext';
 
 export default function App() {
   useEffect(() => {
-    const filteredImages = filterTexturesByDevice([...IMAGE_ASSETS, ...filteredAll], supportsHover);
-    filteredImages.forEach(path => preloadBrowserImage(path));
+    initialPreloadPlan.imagePaths.forEach(path => preloadBrowserImage(path));
   }, []);
 
   return (
-    <PerformanceProvider>
+    <PerformanceProvider initialTier={initialPerformanceTier}>
       <AchievementsProvider>
         <AppContent />
       </AchievementsProvider>

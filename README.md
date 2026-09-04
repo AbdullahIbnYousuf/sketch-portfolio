@@ -4,6 +4,8 @@ An immersive, hand-drawn 3D portfolio for Abdullah Ibn Yousuf, a Computer Scienc
 
 The website presents projects, education, experience, achievements, technical capabilities, and contact information as an explorable paper-and-pencil world rather than a conventional portfolio page.
 
+Live portfolio: [abdullahibnyousuf.is-a.dev](https://abdullahibnyousuf.is-a.dev/)
+
 ## Experience
 
 The portfolio begins at a sketch-style entrance and continues into an infinite corridor connecting four interactive rooms.
@@ -63,7 +65,8 @@ Create `.env.local` if you want the Contact room's message form to submit throug
 VITE_WEB3FORMS_KEY=your_web3forms_access_key
 ```
 
-The form also checks its permitted hostnames in `src/components/canvas/rooms/Contact/MessagePaper.jsx`. Add the production hostname there before deploying the form on a new domain.
+The production identity and permitted hostname are defined in `src/config/siteConfig.js`.
+Local development remains available on `localhost` and `127.0.0.1`.
 
 The social barrels and the rest of the portfolio work without this environment variable.
 
@@ -92,6 +95,7 @@ The optimized static site is generated in `dist/`.
 | `npm run build` | Create the production bundle in `dist/`. |
 | `npm run preview` | Preview the production bundle locally. |
 | `npm run lint` | Run Oxlint across the project. |
+| `npm run assets:audit` | Check deploy sizes, manifest paths, and accidental backup assets. |
 
 ## Routes
 
@@ -126,7 +130,6 @@ sketch-portfolio/
 │   │   └── ui/                  # HUD, navigation, overlays, and accessibility
 │   ├── config/                  # Texture preload configuration
 │   ├── context/                 # Scene, performance, audio, and achievement state
-│   ├── data/                    # Project content
 │   ├── hooks/                   # Metadata and data hooks
 │   ├── styles/                  # Global and component SCSS
 │   ├── utils/                   # Audio, device, camera, and rendering helpers
@@ -174,7 +177,9 @@ Rendering quality adapts to device capability, and mobile layouts use reduced ob
 
 ## Credits
 
-This portfolio is inspired from **ITOM**, the creative developer.
+This portfolio is based on the original interactive portfolio created by Tomasz
+The original code is used and adapted under the MIT License. This customized
+portfolio and its Abdullah-specific content were developed by Abdullah Ibn Yousuf.
 
 ## Contact
 
@@ -182,4 +187,3 @@ This portfolio is inspired from **ITOM**, the creative developer.
 - GitHub: [AbdullahIbnYousuf](https://github.com/AbdullahIbnYousuf)
 - LinkedIn: [abdullahibnyousuf](https://www.linkedin.com/in/abdullahibnyousuf/)
 - Facebook: [AAbdullahIbnYousuf](https://www.facebook.com/AAbdullahIbnYousuf)
-

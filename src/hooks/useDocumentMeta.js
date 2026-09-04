@@ -1,37 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { useScene } from '../context/SceneContext';
+import { ROOM_META, SITE_CONFIG, absoluteSiteUrl } from '../config/siteConfig';
 
 /**
  * useDocumentMeta — Dynamic Meta Tags & Virtual Routing (History API)
  */
-
-const ROOM_META = {
-    null: {
-        path: '/',
-        title: 'Abdullah Ibn Yousuf — Software & AI Developer',
-        description: 'Portfolio of Abdullah Ibn Yousuf, a Computer Science and Engineering student building practical software, AI-assisted applications, backend systems, and full-stack products.',
-    },
-    about: {
-        path: '/about',
-        title: 'About — Abdullah Ibn Yousuf',
-        description: 'Learn about Abdullah Ibn Yousuf, a CSE student, Machine Learning Intern, freelancer, and founder of MayX Labs in Gazipur, Bangladesh.',
-    },
-    gallery: {
-        path: '/gallery',
-        title: 'Projects — Abdullah Ibn Yousuf',
-        description: 'Explore Abdullah Ibn Yousuf\'s featured work: Nafah Agro, AgentLens, MessManage, CareerPilot, and the Office Energy Dashboard.',
-    },
-    studio: {
-        path: '/studio',
-        title: 'The Studio — Abdullah Ibn Yousuf',
-        description: 'Explore Abdullah Ibn Yousuf\'s interactive 3D studio with his profile, software and AI capabilities, and technology skills.',
-    },
-    contact: {
-        path: '/contact',
-        title: 'Contact — Abdullah Ibn Yousuf',
-        description: 'Contact Abdullah Ibn Yousuf about internships, selected freelance projects, software and AI work, or collaborations.',
-    },
-};
 
 // Map URL paths back to room IDs for deep linking
 const PATH_TO_ROOM = {
@@ -48,13 +21,19 @@ export function getInitialRoomFromUrl() {
 }
 
 export function useDocumentMeta() {
-    const { currentRoom, teleportTo, hasEntered } = useScene();
+    const { currentRoom, teleportTo, initialRoom, deeplinkHandled } = useScene();
     const isHandlingPopState = useRef(false);
     const lastPushedRoom = useRef(undefined); // Track what we last pushed to avoid duplicates
 
     // Update document meta and URL when room changes
     useEffect(() => {
-        const roomKey = currentRoom === null ? 'null' : currentRoom;
+        const isPendingDeepLink = currentRoom === null
+            && Boolean(initialRoom)
+            && !deeplinkHandled.current
+            && lastPushedRoom.current === undefined;
+        const roomKey = isPendingDeepLink
+            ? initialRoom
+            : currentRoom === null ? 'null' : currentRoom;
         const meta = ROOM_META[roomKey] || ROOM_META['null'];
 
         // Update the page title
@@ -74,12 +53,30 @@ export function useDocumentMeta() {
         if (ogDesc) ogDesc.setAttribute('content', meta.description);
 
         const ogUrl = document.querySelector('meta[property="og:url"]');
-        if (ogUrl) ogUrl.setAttribute('content', `https://shan.dev${meta.path}`);
+        if (ogUrl) ogUrl.setAttribute('content', absoluteSiteUrl(meta.path));
+
+        const ogImage = document.querySelector('meta[property="og:image"]');
+        if (ogImage) ogImage.setAttribute('content', absoluteSiteUrl(SITE_CONFIG.socialImagePath));
+
+        const twitterTitle = document.querySelector('meta[name="twitter:title"]');
+        if (twitterTitle) twitterTitle.setAttribute('content', meta.title);
+
+        const twitterDesc = document.querySelector('meta[name="twitter:description"]');
+        if (twitterDesc) twitterDesc.setAttribute('content', meta.description);
+
+        const twitterImage = document.querySelector('meta[name="twitter:image"]');
+        if (twitterImage) twitterImage.setAttribute('content', absoluteSiteUrl(SITE_CONFIG.socialImagePath));
 
         // Update canonical link
         const canonicalTag = document.querySelector('link[rel="canonical"]');
         if (canonicalTag) {
-            canonicalTag.setAttribute('href', `https://shan.dev${meta.path}`);
+            canonicalTag.setAttribute('href', absoluteSiteUrl(meta.path));
+        }
+
+        // Preserve a direct room URL until its initial teleport has completed.
+        if (isPendingDeepLink) {
+            lastPushedRoom.current = initialRoom;
+            return;
         }
 
         // Push to browser history
@@ -92,7 +89,7 @@ export function useDocumentMeta() {
             lastPushedRoom.current = currentRoom;
         }
         isHandlingPopState.current = false;
-    }, [currentRoom]);
+    }, [currentRoom, deeplinkHandled, initialRoom]);
 
     // Handle browser back/forward buttons
     useEffect(() => {

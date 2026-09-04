@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useCallback } from 'react';
+import { useThree } from '@react-three/fiber';
 
 import InfiniteCorridorManager from './corridor/InfiniteCorridorManager';
 import EntranceDoors from './entrance/EntranceDoors';
@@ -25,9 +25,9 @@ const ENTRANCE_DOORS_Z = 22;
  * 2. Click doors -> they open + camera flies through
  * 3. Behind doors: infinite corridor with ITOM
  */
-const Experience = ({ isLoaded, onSceneReady, performanceTier }) => {
+const Experience = ({ onSceneReady, startupPerformanceTier }) => {
     // Use SceneContext for room state
-    const { hasEntered, markEntered, enterRoom, isTeleporting, isInRoom, pendingDoorClick } = useScene();
+    const { hasEntered, markEntered, enterRoom, isTeleporting, isInRoom, initialRoom } = useScene();
 
     const { camera } = useThree();
 
@@ -59,16 +59,13 @@ const Experience = ({ isLoaded, onSceneReady, performanceTier }) => {
         // console.log('Entering:', doorId);
     }, [enterRoom]);
 
-    // Optimization: Low tier has simpler lighting
-    const isLowTier = performanceTier === 'LOW';
-
     return (
         <>
-            {/* === ROOM WARM-UP (pre-renders all rooms off-screen during preloader) === */}
-            {/* RoomWarmup mounts all 4 rooms 500 units below, compiles shaders via gl.compile(), 
-                then self-destructs and signals onSceneReady. This ensures both corridor segments
-                AND room shaders are pre-compiled before the user starts interacting. */}
-            <RoomWarmup onWarmupComplete={onSceneReady} isLowTier={isLowTier} />
+            <RoomWarmup
+                onWarmupComplete={onSceneReady}
+                tier={startupPerformanceTier}
+                initialRoom={initialRoom}
+            />
 
             {/* === GLOBAL LIGHTING === */}
             {/* <ambientLight intensity={isLowTier ? 2.5 : 2.2} /> */}
@@ -114,4 +111,3 @@ const Experience = ({ isLoaded, onSceneReady, performanceTier }) => {
 };
 
 export default Experience;
-

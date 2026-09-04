@@ -70,9 +70,9 @@ const InteractiveJourneyEntry = ({
         leftBalloonTexture,
         rightBalloonTexture,
     ] = useLoader(THREE.TextureLoader, [
-        '/textures/about/journey_education_island_bw.png',
-        '/textures/about/journey_balloon_left_bw.png',
-        '/textures/about/journey_balloon_right_bw.png',
+        '/textures/about/journey_education_island_bw.webp',
+        '/textures/about/journey_balloon_left_bw.webp',
+        '/textures/about/journey_balloon_right_bw.webp',
     ]);
 
     [

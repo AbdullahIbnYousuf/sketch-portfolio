@@ -9,6 +9,7 @@ import { useScene } from '../../../context/SceneContext';
 import { useAchievements } from '../../../context/AchievementsContext';
 import { useAudio } from '../../../context/AudioManager';
 import { isTouchDevice } from '../../../utils/deviceDetect';
+import { preloadRoomAssets } from '../../../utils/assetPreloader';
 
 // Constants from CorridorSegment
 const WALL_X_OUTER = 3.5;
@@ -394,6 +395,8 @@ const DoorSection = ({
             return;
         }
 
+        preloadRoomAssets(doorId);
+
         // Reset cursor on transition
         document.body.style.cursor = "auto";
 
@@ -510,7 +513,7 @@ const DoorSection = ({
                 // So we do NOT open immediately anymore. We let the onReady callback handle it.
                 // But we still set the flag so handleRoomReady knows to use fast animation.
 
-                // Fallback: If room doesn't call onReady within 2500ms, open door anyway
+                // Fallback: If loading or GPU warm-up stalls, open the door anyway.
                 // This ensures all rooms work even if they take slightly longer or don't implement onReady
                 loadTimeoutRef.current = setTimeout(() => {
                     if (!roomReadyRef.current) {
@@ -520,10 +523,10 @@ const DoorSection = ({
                         // If it timed out, we still use the current mode preference
                         openDoor(useFastMode);
                     }
-                }, 2500);
+                }, 8000);
             }
         });
-    }, [camera, side, isOpen, isAnimating, setCameraOverride, isFastTeleport]);
+    }, [camera, side, isOpen, isAnimating, setCameraOverride, isFastTeleport, doorId]);
 
     const openDoor = useCallback((fastMode = false) => {
         if (!doorRef.current) return;
@@ -820,6 +823,7 @@ const DoorSection = ({
     // Handle hover effects
     const handlePointerEnter = () => {
         if (isOpen || isAnimating) return;
+        preloadRoomAssets(doorId);
         setIsHovered(true);
         document.body.style.cursor = "pointer";
 

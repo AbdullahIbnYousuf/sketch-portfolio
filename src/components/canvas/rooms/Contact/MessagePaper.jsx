@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, useTexture, Html, useCursor } from '@react-three/drei';
 import * as THREE from 'three';
+import { isAllowedSiteHostname } from '../../../../config/siteConfig';
 
 const PAPER_WIDTH = 1.51; // Legacy ratio 1197/1340
 const PAPER_HEIGHT = 1.7;
@@ -146,18 +147,9 @@ const SmoothButton = ({ texture, onClick, position, size, text, fontPath }) => {
     );
 };
 
-// Web3Forms API Key — loaded from environment variable so it's not exposed in the repo.
+// Web3Forms API Key — configured through the deployment environment.
 // Set VITE_WEB3FORMS_KEY in .env (local dev) and in Cloudflare Pages dashboard (production).
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY || '';
-
-// Only these domains are allowed to submit the form.
-// Anyone cloning the repo and running on localhost will be silently blocked.
-const ALLOWED_ORIGINS = [
-    'shan.dev',
-    'www.shan.dev',
-    'localhost',
-    '127.0.0.1',
-];
 
 // ═══════════════════════════════════════════════════════════════════════
 // 2026 Advanced Anti-Spam System
@@ -380,6 +372,18 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
         setErrors({});
 
         try {
+            if (!WEB3FORMS_KEY) {
+                setErrors({ message: 'The contact form is temporarily unavailable. Please email me directly.' });
+                setIsSubmitting(false);
+                return;
+            }
+
+            if (!isAllowedSiteHostname(window.location.hostname)) {
+                setErrors({ message: 'The contact form is unavailable on this website address.' });
+                setIsSubmitting(false);
+                return;
+            }
+
             // --- 0. Rate Limiting (1 message per 30 min) ---
             const rateCheck = checkRateLimit();
             if (!rateCheck.allowed) {
@@ -392,17 +396,6 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
             const timeOnForm = Date.now() - formLoadedAt.current;
             if (timeOnForm < 3000) {
                 // Bots submit instantly — silently fake success
-                setSubmitStatus('success');
-                setIsSubmitting(false);
-                return;
-            }
-
-            // --- 0c. Origin / Domain Lock ---
-            // Block submissions from cloned repos running on unauthorized domains
-            const currentHost = window.location.hostname;
-            const isAllowedOrigin = ALLOWED_ORIGINS.some(d => currentHost === d || currentHost.endsWith('.' + d));
-            if (!isAllowedOrigin) {
-                // Silently fake success so attacker thinks it worked
                 setSubmitStatus('success');
                 setIsSubmitting(false);
                 return;

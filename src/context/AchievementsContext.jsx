@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAudio } from './AudioManager';
+import { SITE_CONFIG } from '../config/siteConfig';
 
 const AchievementsContext = createContext();
 
@@ -21,11 +22,17 @@ export const AchievementsProvider = ({ children }) => {
     // Load completed achievements from local storage
     const [completed, setCompleted] = useState(() => {
         try {
-            const saved = localStorage.getItem('itom_achievements');
-            if (saved) {
-                const parsed = JSON.parse(saved);
+            const saved = localStorage.getItem(SITE_CONFIG.achievementStorageKey);
+            const legacySaved = saved ? null : localStorage.getItem(SITE_CONFIG.legacyAchievementStorageKey);
+            const storedValue = saved || legacySaved;
+            if (storedValue) {
+                const parsed = JSON.parse(storedValue);
                 // Wrzucamy do pule, ale ignorujemy 'corridor_enter' żeby tooltip wejściowy zawsze się pojawiał
                 const filtered = parsed.filter(id => id !== 'corridor_enter');
+                if (legacySaved) {
+                    localStorage.setItem(SITE_CONFIG.achievementStorageKey, JSON.stringify(filtered));
+                    localStorage.removeItem(SITE_CONFIG.legacyAchievementStorageKey);
+                }
                 completedRef.current = [...filtered];
                 return filtered;
             }
@@ -95,7 +102,7 @@ export const AchievementsProvider = ({ children }) => {
     // Save to localStorage when completed changes
     useEffect(() => {
         const toSave = completed.filter(id => id !== 'corridor_enter');
-        localStorage.setItem('itom_achievements', JSON.stringify(toSave));
+        localStorage.setItem(SITE_CONFIG.achievementStorageKey, JSON.stringify(toSave));
     }, [completed]);
 
     const showTutorial = useCallback((id) => {
@@ -118,7 +125,7 @@ export const AchievementsProvider = ({ children }) => {
                 const updated = [...prev, id];
                 // Save locally excluding corridor_enter
                 const toSave = updated.filter(item => item !== 'corridor_enter');
-                localStorage.setItem('itom_achievements', JSON.stringify(toSave));
+                localStorage.setItem(SITE_CONFIG.achievementStorageKey, JSON.stringify(toSave));
                 return updated;
             });
 

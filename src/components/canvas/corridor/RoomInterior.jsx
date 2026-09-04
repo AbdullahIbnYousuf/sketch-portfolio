@@ -1,4 +1,5 @@
-import { useMemo, memo, Suspense, useEffect } from 'react';
+import { useCallback, useMemo, memo, Suspense, useEffect } from 'react';
+import { useThree } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
@@ -8,6 +9,8 @@ import GalleryRoom from '../rooms/Gallery/GalleryRoom';
 import StudioRoom from '../rooms/Studio/StudioRoom';
 import AboutRoom from '../rooms/About/AboutRoom';
 import ContactRoom from '../rooms/Contact/ContactRoom';
+import { usePerformance } from '../../../context/PerformanceContext';
+import { getWarmupRenderTargetSize, warmRenderer } from '../../../utils/shaderWarmup';
 
 // Room configurations
 const ROOM_CONFIG = {
@@ -36,6 +39,8 @@ const NATURAL_TILE_W = (1582 / 94) * 0.15;
  * Contains corridor + giant room at the end.
  */
 const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
+    const { gl, scene, camera } = useThree();
+    const { tier } = usePerformance();
     const { corridorWidth, corridorHeight, corridorDepth, roomWidth, roomHeight, roomDepth } = ROOM_CONFIG;
     const halfDepth = corridorDepth / 2;
     const roomZ = -corridorDepth - roomDepth / 2;
@@ -122,6 +127,16 @@ const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
 
     const isGallery = roomId === 'gallery';
 
+    const handleRoomContentReady = useCallback(() => {
+        void warmRenderer({
+            gl,
+            scene,
+            camera,
+            keys: [roomId],
+            renderTargetSize: getWarmupRenderTargetSize(tier),
+        }).finally(() => onReady?.());
+    }, [camera, gl, onReady, roomId, scene, tier]);
+
     // Trigger onReady for generic rooms (which don't have their own component to do it)
     useEffect(() => {
         if (showRoom && !['THE GALLERY', 'THE STUDIO', 'THE ABOUT', "LET'S CONNECT"].includes(label)) {
@@ -196,28 +211,28 @@ const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
                         // Positioned at the end of the corridor
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <GalleryRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
+                                <GalleryRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : roomId === 'studio' ? (
                         // === NEW STUDIO ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <StudioRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
+                                <StudioRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : roomId === 'about' ? (
                         // === NEW ABOUT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <AboutRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
+                                <AboutRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : roomId === 'contact' ? (
                         // === NEW CONTACT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <ContactRoom showRoom={showRoom} onReady={onReady} isExiting={isExiting} />
+                                <ContactRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : (

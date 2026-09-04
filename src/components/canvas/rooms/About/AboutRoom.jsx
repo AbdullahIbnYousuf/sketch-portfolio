@@ -44,10 +44,10 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, [overlayContent]);
 
     useEffect(() => {
-        if (isExiting || isTeleporting) {
+        if (!isWarmup && (isExiting || isTeleporting)) {
             hidePopup();
         }
-    }, [isExiting, isTeleporting, hidePopup]);
+    }, [isExiting, isTeleporting, hidePopup, isWarmup]);
 
     // Track if we've signaled ready
     const hasSignaledReady = useRef(false);
@@ -88,6 +88,8 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // selected milestone feel closer without shifting it away from the
     // spotlight. Closing the paper restores the precise flight position.
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         const focus = overlayContent?.cameraFocus;
         const frame = overlayContent?.cameraFrame;
 
@@ -134,11 +136,12 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             gsap.killTweensOf(camera.position);
             focusCameraState.current = null;
         }
-    }, [camera, isExiting, isTeleporting, overlayContent]);
+    }, [camera, isExiting, isTeleporting, isWarmup, overlayContent]);
 
-    useEffect(() => () => {
-        gsap.killTweensOf(camera.position);
-    }, [camera]);
+    useEffect(() => {
+        if (isWarmup) return undefined;
+        return () => gsap.killTweensOf(camera.position);
+    }, [camera, isWarmup]);
 
     // Ready detection + flight animation
     useFrame((state, delta) => {
@@ -153,6 +156,8 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 }
             }
         }
+
+        if (isWarmup) return;
 
         // === TELEPORTING: Stop all camera control ===
         // TeleportRoom handles camera position/rotation during teleport
@@ -239,6 +244,8 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Handle scroll wheel (desktop)
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         const handleWheel = (e) => {
             if (overlayRef.current) return; // BLOCK SCROLL IF OVERLAY IS OPEN
             scrollVelocity.current += e.deltaY * 0.002;
@@ -246,11 +253,13 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
         window.addEventListener('wheel', handleWheel, { passive: true });
         return () => window.removeEventListener('wheel', handleWheel);
-    }, []);
+    }, [isWarmup]);
 
     // Handle touch (mobile) - vertical swipe = scroll
     const lastTouchY = useRef(0);
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         const handleTouchStart = (e) => {
             if (e.touches.length === 1) {
                 lastTouchY.current = e.touches[0].clientY;
@@ -273,7 +282,7 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             window.removeEventListener('touchstart', handleTouchStart);
             window.removeEventListener('touchmove', handleTouchMove);
         };
-    }, []);
+    }, [isWarmup]);
 
     return (
         <group ref={roomRef} position={[0, 0, -25]}>

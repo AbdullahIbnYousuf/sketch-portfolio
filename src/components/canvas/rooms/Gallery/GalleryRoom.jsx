@@ -116,10 +116,10 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     const cardRefs = useRef([]);
 
     useEffect(() => {
-        if (isExiting || isTeleporting) {
+        if (!isWarmup && (isExiting || isTeleporting)) {
             hidePopup();
         }
-    }, [isExiting, isTeleporting, hidePopup]);
+    }, [isExiting, isTeleporting, hidePopup, isWarmup]);
 
     // Setup Paint Transition
     const { onBeforeCompile, animatePaint, resetPaint, uniformsData, updateRoomOrigin } = usePaintMaterial();
@@ -332,6 +332,8 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // --- INTERACTION ---
     const lastTouchX = useRef(0);
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         // Observers enable us to normalize wheel, touch, and pointer events
         const scrollObserver = Observer.create({
             target: window,
@@ -362,9 +364,10 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         });
 
         return () => scrollObserver.kill();
-    }, [showRoom, selectedCard, globalIsAnimating]);
+    }, [showRoom, selectedCard, globalIsAnimating, isTransitioning, isWarmup]);
 
     useFrame((state, delta) => {
+        if (isWarmup) return;
         currentScroll.current = THREE.MathUtils.lerp(currentScroll.current, targetScroll.current, delta * 5);
     });
 

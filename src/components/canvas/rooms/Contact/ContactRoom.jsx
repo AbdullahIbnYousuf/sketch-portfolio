@@ -106,10 +106,10 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, [effectiveVolume]);
 
     useEffect(() => {
-        if (isExiting || isTeleporting) {
+        if (!isWarmup && (isExiting || isTeleporting)) {
             hidePopup();
         }
-    }, [isExiting, isTeleporting, hidePopup]);
+    }, [isExiting, isTeleporting, hidePopup, isWarmup]);
 
     // Load Sea Texture
     const seaTexture = useTexture("/textures/contact/faletopdown.webp");
@@ -139,6 +139,8 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, [seaTexture, moloTexture]);
 
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         // Change to YXZ smoothly on mount for proper head nodding, 
         // avoiding mathematical snapping of the Euler angles.
         camera.rotation.reorder('YXZ');
@@ -147,7 +149,7 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             // Restore default XYZ on unmount so other rooms/corridors don't break
             camera.rotation.reorder('XYZ');
         };
-    }, [camera]);
+    }, [camera, isWarmup]);
 
     // ===== PAINT TRANSITION =====
     // Contact is on the RIGHT side of the corridor, so reveal goes from right (+X) into the room
@@ -294,6 +296,8 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 if (!isWarmup) setTimeout(() => showTutorial('contact_submit'), 2000);
             }
         }
+
+        if (isWarmup) return;
 
         // 1. Camera Animation (Simple Lerp)
         if (hasAnimatedDown.current && !isExiting && !hasExitTriggered.current) {

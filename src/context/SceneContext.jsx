@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useCallback, useMemo, useRef } from 'react';
 import { getInitialRoomFromUrl } from '../hooks/useDocumentMeta';
+import { preloadRoomAssets } from '../utils/assetPreloader';
 
 const SceneContext = createContext(null);
 
@@ -78,6 +79,7 @@ export const SceneProvider = ({ children }) => {
     const teleportTo = useCallback((roomId) => {
         if (isTeleporting || roomId === currentRoom) return; // Prevent double teleport or same room
 
+        preloadRoomAssets(roomId);
         setTeleportTarget(roomId);
         setIsTeleporting(true);
         setIsFastTeleport(true); // Enable fast teleport mode

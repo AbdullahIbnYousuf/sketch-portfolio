@@ -127,10 +127,10 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, [effectiveVolume]);
 
     useEffect(() => {
-        if (isExiting || isTeleporting) {
+        if (!isWarmup && (isExiting || isTeleporting)) {
             hidePopup();
         }
-    }, [isExiting, isTeleporting, hidePopup]);
+    }, [isExiting, isTeleporting, hidePopup, isWarmup]);
 
     // ===== PAINT TRANSITION (top-to-bottom) =====
     const { onBeforeCompile: paintOnBeforeCompile, animatePaint, resetPaint, uniformsData: paintUniforms, updateRoomOrigin } = usePaintMaterial(STUDIO_PAINT_CONFIG);
@@ -366,6 +366,8 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Wheel Listener for Desktop
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         const handleWheel = (e) => {
             if (overlayContent) return;
             // e.deltaY > 0 means scroll DOWN.
@@ -377,10 +379,12 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
         window.addEventListener('wheel', handleWheel);
         return () => window.removeEventListener('wheel', handleWheel);
-    }, [overlayContent, unlockAchievement]);
+    }, [isWarmup, overlayContent, unlockAchievement]);
 
     // Global Event Listeners for seamless drag
     useEffect(() => {
+        if (isWarmup) return undefined;
+
         window.addEventListener('pointerup', handlePointerUp);
         window.addEventListener('pointermove', handlePointerMove);
         // Also touch events for mobile if pointer events fail (though React usually patches)
@@ -393,7 +397,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             window.removeEventListener('touchend', handlePointerUp);
             window.removeEventListener('touchmove', handlePointerMove);
         };
-    }, [handlePointerUp, handlePointerMove]);
+    }, [handlePointerUp, handlePointerMove, isWarmup]);
 
     // STEP 1 ONLY: Rotate tower to center the clicked monitor
     const handleMonitorClick = useCallback((item) => {
@@ -573,6 +577,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // Cleaned up old listener effect that is now handled by the global effect above
 
     useFrame((state, delta) => {
+        if (isWarmup) return;
         if (!towerRef.current) return;
 
         // Auto-rotate and Physics when idle
@@ -942,35 +947,23 @@ const MonitorBlock = memo(({ item, meshRef, isSelected, onMonitorClick, disabled
     const matRef5 = useRef(); // -Z back
     const matRefs = [matRef0, matRef1, matRef2, matRef3, matRef4, matRef5];
 
-    // Check device types (prioritize Sanity 'device' field, fallback to platform defaults)
-    const deviceShape = item.device || (PLATFORM_CONFIG[item.platform]?.shape) || 'monitor';
-    const isBlogMonitor = deviceShape === 'monitor';
-    const isTvMonitor = deviceShape === 'tv';
-    const isPhoneMonitor = deviceShape === 'phone';
-
-    // Determine the URL for the front texture (custom or default)
-    const frontTextureUrl = item.frontTexture || (
-        isBlogMonitor ? '/textures/studio/monitor_front.webp' :
-            isTvMonitor ? '/textures/studio/tv_front.webp' :
-                '/textures/studio/phone_front.webp'
-    );
+    // The capability tower uses one monitor shape for every active item.
+    const frontTextureUrl = item.frontTexture || '/textures/studio/monitor_front.webp';
 
     // Dynamic Dummy texture for touch devices 
     const isTouch = isTouchDevice();
     const dummyTex = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
     // Determine painted front texture URL
-    const paintedFrontTextureUrl = isTouch ? dummyTex : (item.paintedFrontTexture || (
-        isBlogMonitor ? '/textures/studio/monitor_front_painted.webp' :
-            isTvMonitor ? '/textures/studio/tv_front_painted.webp' :
-                '/textures/studio/phone_front_painted.webp'
-    ));
+    const paintedFrontTextureUrl = isTouch
+        ? dummyTex
+        : (item.paintedFrontTexture || '/textures/studio/monitor_front_painted.webp');
 
     // Load dynamic front texture
     const frontTex = useLoader(TextureLoader, frontTextureUrl);
     const frontPaintedTex = useLoader(TextureLoader, paintedFrontTextureUrl);
 
-    // Load Monitor textures (Blog) - shell + painted
+    // Load the active monitor shell and its painted hover variants.
     const monitorBack = useLoader(TextureLoader, '/textures/studio/monitor_back.webp');
     const monitorTop = useLoader(TextureLoader, '/textures/studio/monitor_top.webp');
     const monitorBottom = useLoader(TextureLoader, '/textures/studio/monitor_bottom.webp');
@@ -982,62 +975,18 @@ const MonitorBlock = memo(({ item, meshRef, isSelected, onMonitorClick, disabled
     const monitorLeftPainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/monitor_left_painted.webp');
     const monitorRightPainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/monitor_right_painted.webp');
 
-    // Load TV textures (YouTube) - shell + painted
-    const tvBack = useLoader(TextureLoader, '/textures/studio/tv_back.webp');
-    const tvTop = useLoader(TextureLoader, '/textures/studio/tv_top.webp');
-    const tvBottom = useLoader(TextureLoader, '/textures/studio/tv_bottom.webp');
-    const tvSide = useLoader(TextureLoader, '/textures/studio/tv_side.webp');
-    const tvBackPainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/tv_back_painted.webp');
-    const tvTopPainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/tv_top_painted.webp');
-    const tvBottomPainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/tv_bottom_painted.webp');
-    const tvSidePainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/tv_side_painted.webp');
-
-    // Load Phone textures (TikTok) - shell + painted
-    const phoneBack = useLoader(TextureLoader, '/textures/studio/phone_back.webp');
-    const phoneSide = useLoader(TextureLoader, '/textures/studio/phone_side.webp');
-    const phoneBackPainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/phone_back_painted.webp');
-    const phoneSidePainted = useLoader(TextureLoader, isTouch ? dummyTex : '/textures/studio/phone_side_painted.webp');
-
-    // Build texture config for current device type
-    // Each entry: { sketch, painted } — if painted is null, that face won't have reveal
-    const faceConfig = useMemo(() => {
-        if (isBlogMonitor) {
-            return [
-                { sketch: monitorRight, painted: monitorRightPainted },    // +X
-                { sketch: monitorLeft, painted: monitorLeftPainted },      // -X
-                { sketch: monitorTop, painted: monitorTopPainted },        // +Y
-                { sketch: monitorBottom, painted: monitorBottomPainted },  // -Y
-                { sketch: frontTex, painted: frontPaintedTex },            // +Z front
-                { sketch: monitorBack, painted: monitorBackPainted },      // -Z
-            ];
-        } else if (isTvMonitor) {
-            return [
-                { sketch: tvSide, painted: tvSidePainted },       // +X
-                { sketch: tvSide, painted: tvSidePainted },       // -X
-                { sketch: tvTop, painted: tvTopPainted },          // +Y
-                { sketch: tvBottom, painted: tvBottomPainted },    // -Y
-                { sketch: frontTex, painted: frontPaintedTex },    // +Z front
-                { sketch: tvBack, painted: tvBackPainted },        // -Z
-            ];
-        } else if (isPhoneMonitor) {
-            return [
-                { sketch: phoneSide, painted: phoneSidePainted },  // +X
-                { sketch: phoneSide, painted: phoneSidePainted },  // -X
-                { sketch: phoneSide, painted: phoneSidePainted },  // +Y
-                { sketch: phoneSide, painted: phoneSidePainted },  // -Y
-                { sketch: frontTex, painted: frontPaintedTex },    // +Z front
-                { sketch: phoneBack, painted: phoneBackPainted },  // -Z
-            ];
-        }
-        return null;
-    }, [
-        isBlogMonitor, isTvMonitor, isPhoneMonitor,
+    // Each entry is one box face: +X, -X, +Y, -Y, +Z, -Z.
+    const faceConfig = useMemo(() => ([
+        { sketch: monitorRight, painted: monitorRightPainted },
+        { sketch: monitorLeft, painted: monitorLeftPainted },
+        { sketch: monitorTop, painted: monitorTopPainted },
+        { sketch: monitorBottom, painted: monitorBottomPainted },
+        { sketch: frontTex, painted: frontPaintedTex },
+        { sketch: monitorBack, painted: monitorBackPainted },
+    ]), [
         frontTex, frontPaintedTex,
         monitorBack, monitorTop, monitorBottom, monitorLeft, monitorRight,
         monitorBackPainted, monitorTopPainted, monitorBottomPainted, monitorLeftPainted, monitorRightPainted,
-        tvBack, tvTop, tvBottom, tvSide,
-        tvBackPainted, tvTopPainted, tvBottomPainted, tvSidePainted,
-        phoneBack, phoneSide, phoneBackPainted, phoneSidePainted
     ]);
 
     // Painted materials for inner box (standard materials showing painted textures)

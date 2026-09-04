@@ -1,6 +1,6 @@
 /**
- * Texture Preload List - ALL textures for the entire experience
- * Everything loads during the initial preloader for zero stutter when entering rooms.
+ * Tier-aware texture manifest.
+ * Core assets load up front; room groups load according to the active preload plan.
  */
 
 // Entrance scene textures
@@ -94,9 +94,6 @@ export const CORRIDOR_TEXTURES = [
 
 // Standard HTML Image assets (preloaded via new Image() in App.jsx)
 export const IMAGE_ASSETS = [
-    '/images/avatar-thinking.webp',
-    '/images/avatar-hero.webp',
-    '/images/ink-splash.webp',
     '/images/map.webp',
     '/images/map_about_painted.webp',
     '/images/map_contact_painted.webp',
@@ -181,47 +178,17 @@ export const CONTACT_TEXTURES = [
 export const ABOUT_TEXTURES = [
     // Avatar
     '/textures/about/awatarnachmurce.webp',
-    // Awards
+    // Achievement cards
     '/textures/about/SOTY.webp',
     '/textures/about/SOTY_painted.webp',
     '/textures/about/SOTD.webp',
     '/textures/about/SOTD_painted.webp',
     '/textures/about/SOTM.webp',
     '/textures/about/SOTM_painted.webp',
-    '/textures/about/button.webp',
-    '/textures/about/button_painted.webp',
-    // Award images (for overlay)
-    '/textures/about/SOTDAYYOUNGMULTICSSWINNER.webp',
-    '/textures/about/SOTDAYYOUNGMULTIGSAP.webp',
-    '/textures/about/SOTDAYYOUNGMULTIORPETRON.webp',
-    '/textures/about/SOTDAYYOUNGMULTIDESIGNNOMINESS.webp',
     // Journey education island and experience balloons (black-and-white versions are active)
-    '/textures/about/journey_education_island_bw.png',
-    '/textures/about/journey_balloon_left_bw.png',
-    '/textures/about/journey_balloon_right_bw.png',
-    // Skill balloons - large
-    '/textures/about/reactduzybalon.webp',
-    '/textures/about/reactduzybalon_painted.webp',
-    '/textures/about/threejsduzybalon.webp',
-    '/textures/about/threejsduzybalon_painted.webp',
-    '/textures/about/GSAPduzybalon.webp',
-    '/textures/about/GSAPduzybalon_painted.webp',
-    // Skill balloons - medium
-    '/textures/about/JSSREDNIBALON.webp',
-    '/textures/about/JSSREDNIBALON_painted.webp',
-    '/textures/about/csssrednibalon.webp',
-    '/textures/about/csssrednibalon_painted.webp',
-    '/textures/about/nextjssrednibalon.webp',
-    '/textures/about/nextjssrednibalon_painted.webp',
-    // Skill balloons - small
-    '/textures/about/htmlmalybalon.webp',
-    '/textures/about/htmlmalybalon_painted.webp',
-    '/textures/about/gitmalybalon.webp',
-    '/textures/about/gitmalybalon_painted.webp',
-    '/textures/about/figmamalybalon.webp',
-    '/textures/about/figmamalybalon_painted.webp',
-    '/textures/about/firebasemalybalon.webp',
-    '/textures/about/firebasemalybalon_painted.webp',
+    '/textures/about/journey_education_island_bw.webp',
+    '/textures/about/journey_balloon_left_bw.webp',
+    '/textures/about/journey_balloon_right_bw.webp',
     // Clouds
     '/textures/clouds/1131c3eb-dfae-423f-924b-ff39d8ccd6dc.webp',
     '/textures/clouds/254b8ec8-d6f7-4275-956f-7bab65b2ce2d.webp',
@@ -235,7 +202,9 @@ export const ABOUT_TEXTURES = [
 
 // Studio Room textures (loaded via useLoader(TextureLoader))
 export const STUDIO_TEXTURES = [
-    // Monitor (blog)
+    // Dossier and monitor tower
+    '/textures/paper-texture.webp',
+    '/textures/about/awatarnachmurce.webp',
     '/textures/studio/monitor_front.webp',
     '/textures/studio/monitor_front_painted.webp',
     '/textures/studio/monitor_back.webp',
@@ -248,55 +217,69 @@ export const STUDIO_TEXTURES = [
     '/textures/studio/monitor_left_painted.webp',
     '/textures/studio/monitor_right.webp',
     '/textures/studio/monitor_right_painted.webp',
-    // TV (youtube)
-    '/textures/studio/tv_front.webp',
-    '/textures/studio/tv_front_painted.webp',
-    '/textures/studio/tv_back.webp',
-    '/textures/studio/tv_back_painted.webp',
-    '/textures/studio/tv_top.webp',
-    '/textures/studio/tv_top_painted.webp',
-    '/textures/studio/tv_bottom.webp',
-    '/textures/studio/tv_bottom_painted.webp',
-    '/textures/studio/tv_side.webp',
-    '/textures/studio/tv_side_painted.webp',
-    // Phone (tiktok)
-    '/textures/studio/phone_front.webp',
-    '/textures/studio/phone_front_painted.webp',
-    '/textures/studio/phone_back.webp',
-    '/textures/studio/phone_back_painted.webp',
-    '/textures/studio/phone_side.webp',
-    '/textures/studio/phone_side_painted.webp',
-    // Custom content front textures
-    '/textures/studio/monitorfront_postnafbdoublewinner.webp',
-    '/textures/studio/monitorfront_postnafbdoublewinner_painted.webp',
-    '/textures/studio/phonefront_followmeontiktok.webp',
-    '/textures/studio/phonefront_followmeontiktok_painted.webp',
-    '/textures/studio/tvfront_filmikedytowaniezdjec.webp',
-    '/textures/studio/tvfront_filmikedytowaniezdjec_painted.webp',
-    '/textures/studio/tvfront_filmikprojektdlamultiego.webp',
-    '/textures/studio/tvfront_filmikprojektdlamultiego_painted.webp',
+    // Interactive skill balloons now live in Studio
+    '/textures/about/reactduzybalon.webp',
+    '/textures/about/reactduzybalon_painted.webp',
+    '/textures/about/threejsduzybalon.webp',
+    '/textures/about/threejsduzybalon_painted.webp',
+    '/textures/about/GSAPduzybalon.webp',
+    '/textures/about/GSAPduzybalon_painted.webp',
+    '/textures/about/JSSREDNIBALON.webp',
+    '/textures/about/JSSREDNIBALON_painted.webp',
+    '/textures/about/csssrednibalon.webp',
+    '/textures/about/csssrednibalon_painted.webp',
+    '/textures/about/nextjssrednibalon.webp',
+    '/textures/about/nextjssrednibalon_painted.webp',
+    '/textures/about/htmlmalybalon.webp',
+    '/textures/about/htmlmalybalon_painted.webp',
+    '/textures/about/gitmalybalon.webp',
+    '/textures/about/gitmalybalon_painted.webp',
+    '/textures/about/figmamalybalon.webp',
+    '/textures/about/figmamalybalon_painted.webp',
+    '/textures/about/firebasemalybalon.webp',
+    '/textures/about/firebasemalybalon_painted.webp',
 ];
 
 // ============================================
 // COMBINED EXPORTS
 // ============================================
 
-// Textures loaded via useTexture (drei) - entrance, corridor, UI, gallery, contact
-export const PRELOAD_ALL = [
+export const CORE_TEXTURES = [
     ...ENTRANCE_TEXTURES,
     ...CORRIDOR_TEXTURES,
     ...UI_TEXTURES,
-    ...GALLERY_TEXTURES,
-    ...CONTACT_TEXTURES,
-    ...IMAGE_ASSETS,
 ];
 
+export const ROOM_TEXTURES = Object.freeze({
+    gallery: GALLERY_TEXTURES,
+    about: ABOUT_TEXTURES,
+    studio: STUDIO_TEXTURES,
+    contact: CONTACT_TEXTURES,
+});
 
-// Textures loaded via useLoader(TextureLoader) - about, studio
-export const PRELOAD_LOADER = [
-    ...ABOUT_TEXTURES,
-    ...STUDIO_TEXTURES,
-];
+export const getRoomIdFromPath = (pathname = '/') => {
+    const normalizedPath = pathname.replace(/\/+$/, '') || '/';
+    const roomId = normalizedPath.slice(1);
+    return Object.hasOwn(ROOM_TEXTURES, roomId) ? roomId : null;
+};
+
+export const getPreloadPlan = ({ tier, pathname = '/', supportsHover = false }) => {
+    const initialRoom = getRoomIdFromPath(pathname);
+    const roomIds = tier === 'HIGH'
+        ? Object.keys(ROOM_TEXTURES)
+        : initialRoom ? [initialRoom] : [];
+    const texturePaths = [
+        ...CORE_TEXTURES,
+        ...roomIds.flatMap((roomId) => ROOM_TEXTURES[roomId]),
+    ];
+
+    return {
+        initialRoom,
+        roomIds,
+        texturePaths: [...new Set(filterTexturesByDevice(texturePaths, supportsHover))],
+        imagePaths: [...new Set(IMAGE_ASSETS)],
+    };
+};
 
 /**
  * Filters the preload list based on whether the device supports hover (desktop) 
@@ -306,35 +289,5 @@ export const PRELOAD_LOADER = [
  * @returns {string[]} The filtered list
  */
 export const filterTexturesByDevice = (list, usePainted) => {
-    // 1. Identify all paths that have a _painted version available
-    const paintedVersions = new Set(list.filter(p => p.includes('_painted.webp')));
-    
-    // Also include the special css3logo case
-    const hasCss3Painted = list.some(p => p.includes('css3logo_painted.webp'));
-    
-    return list.filter(path => {
-        const isPainted = path.includes('_painted.webp');
-        const isCss3 = path.includes('css3logo_painted.webp');
-        
-        // Find the "standard" version for this path if it's a painted one
-        let standardVersion = null;
-        if (isPainted) {
-            standardVersion = path.replace('_painted.webp', '.webp');
-        } else if (isCss3) {
-            standardVersion = path.replace('css3logo_painted.webp', 'csslogo.webp');
-        } else {
-            // Check if this standard path HAS a painted version in the list
-            const pVersion = path.replace('.webp', '_painted.webp');
-            const css3Version = path.replace('csslogo.webp', 'css3logo_painted.webp');
-            if (list.includes(pVersion) || (path.includes('csslogo.webp') && hasCss3Painted)) {
-                // Return true to keep the standard version! Both desktop and mobile need it.
-                return true; 
-            }
-            // If it doesn't have a painted version, it's a static texture (always keep)
-            return true;
-        }
-
-        // It's a painted version
-        return usePainted;
-    });
+    return list.filter((path) => usePainted || !path.includes('_painted.'));
 };
