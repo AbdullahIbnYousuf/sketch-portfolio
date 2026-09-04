@@ -177,7 +177,7 @@ Rendering quality adapts to device capability, and mobile layouts use reduced ob
 
 ## Credits
 
-This portfolio is based on the original interactive portfolio created by Tomasz
+This portfolio is based on the original interactive portfolio created by Tomasz.
 The original code is used and adapted under the MIT License. This customized
 portfolio and its Abdullah-specific content were developed by Abdullah Ibn Yousuf.
 

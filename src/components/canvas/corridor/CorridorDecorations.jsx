@@ -379,10 +379,9 @@ const CorridorDecorations = ({ segmentLength, zOffset, corridorWidth = 4, corrid
             height: 2.5 / 1.785,     // Legacy ratio 3200x1792
             y: 0.3,                  // Wysokość na ścianie
             id: 'frame-1',
-            // Custom setup for "rysuneknaobraz1.png"
-            image: '/textures/corridor/rysuneknaobraz1.webp',
-            imageWidth: 1.1,
-            imageHeight: 1.1,
+            image: '/textures/corridor/naruto_saving_boruto_sketch.webp',
+            imageWidth: 1.82,
+            imageHeight: 1.025,
             offsetFromWall: 0.1, // Przesunięcie bliżej środka korytarza (0.1 unit)
         },
         {
@@ -404,11 +403,9 @@ const CorridorDecorations = ({ segmentLength, zOffset, corridorWidth = 4, corrid
             height: 2.5 / 1.785,
             y: 0.25,
             id: 'frame-3',
-            signature: "Empty canvas!\nWant your art here?\nContact me!",
-            signatureX: 0,
-            signatureY: 0,
-            signatureSize: 0.12,
-            signatureColor: '#333333'
+            image: '/textures/corridor/give_up_on_your_dream.webp',
+            imageWidth: 1.82,
+            imageHeight: 1.025,
         },
         {
             z: zOffset - 55,         // Między About a Connect (relZ -50 do -60)
@@ -417,11 +414,9 @@ const CorridorDecorations = ({ segmentLength, zOffset, corridorWidth = 4, corrid
             height: 2.5 / 1.785,
             y: 0.35,
             id: 'frame-4',
-            signature: "Empty canvas!\nWant your art here?\nContact me!",
-            signatureX: 0,
-            signatureY: 0,
-            signatureSize: 0.12,
-            signatureColor: '#333333'
+            image: '/textures/corridor/go_beyond_plus_ultra_poster.webp',
+            imageWidth: 1.82,
+            imageHeight: 1.025,
         },
     ], [zOffset]);
 

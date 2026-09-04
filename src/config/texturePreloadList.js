@@ -84,8 +84,10 @@ export const CORRIDOR_TEXTURES = [
     '/textures/corridor/gorastolika.webp',
     '/textures/corridor/szafkaprzod.webp',
     '/textures/corridor/szafkaprzodgora.webp',
-    '/textures/corridor/rysuneknaobraz1.webp',
+    '/textures/corridor/naruto_saving_boruto_sketch.webp',
     '/textures/corridor/rysuneknaobrazek3.webp',
+    '/textures/corridor/give_up_on_your_dream.webp',
+    '/textures/corridor/go_beyond_plus_ultra_poster.webp',
     // DoorSection extras
     '/textures/corridor/strzalka.webp',
     '/textures/corridor/doors/door_back.webp',
