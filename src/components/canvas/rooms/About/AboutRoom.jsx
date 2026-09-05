@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { PositionalAudio } from '@react-three/drei';
 import * as THREE from 'three';
 import PaperAirplane from './PaperAirplane';
 import InfiniteSkyManager from './InfiniteSkyManager';
+import RoomAmbience from '../RoomAmbience';
 import { useScene } from '../../../../context/SceneContext';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { useAudio } from '../../../../context/AudioManager';
@@ -23,19 +23,19 @@ export const AUDIO_SETTINGS = {
     rolloff: 0.8
 };
 
-const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
+const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup, isPreparing = false, isActive = true }) => {
     const { camera } = useThree();
     const { isTeleporting, overlayContent } = useScene();
+    const canInteract = isActive && !isPreparing && !isWarmup && !isExiting && !isTeleporting;
     const { showTutorial, unlockAchievement, hidePopup } = useAchievements();
     const { globalVolume, isMuted } = useAudio();
     const effectiveVolume = isMuted ? 0 : AUDIO_SETTINGS.volume * globalVolume;
 
-    const audioRef = useRef();
     useEffect(() => {
-        if (audioRef.current && audioRef.current.setVolume) {
-            audioRef.current.setVolume(effectiveVolume);
-        }
-    }, [effectiveVolume]);
+        if (!canInteract) return undefined;
+        const timer = setTimeout(() => showTutorial('about_fly'), 2000);
+        return () => clearTimeout(timer);
+    }, [canInteract, showTutorial]);
 
     // Use ref to track overlay state for event listeners (avoids stale closures)
     const overlayRef = useRef(overlayContent);
@@ -88,7 +88,7 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // selected milestone feel closer without shifting it away from the
     // spotlight. Closing the paper restores the precise flight position.
     useEffect(() => {
-        if (isWarmup) return undefined;
+        if (!canInteract) return undefined;
 
         const focus = overlayContent?.cameraFocus;
         const frame = overlayContent?.cameraFrame;
@@ -136,8 +136,9 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             gsap.killTweensOf(camera.position);
             focusCameraState.current = null;
         }
-    }, [camera, isExiting, isTeleporting, isWarmup, overlayContent]);
+    }, [camera, isExiting, isTeleporting, canInteract, overlayContent]);
 
+    // Cleanup only on unmount; deactivation must not kill the door's exit tween.
     useEffect(() => {
         if (isWarmup) return undefined;
         return () => gsap.killTweensOf(camera.position);
@@ -150,14 +151,10 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             if (frameCount.current >= FRAMES_TO_WAIT) {
                 hasSignaledReady.current = true;
                 onReady?.();
-                // trigger achievement hint when showing the room
-                if (!isTeleporting && !isExiting) {
-                    if (!isWarmup) setTimeout(() => showTutorial('about_fly'), 2000);
-                }
             }
         }
 
-        if (isWarmup) return;
+        if (!canInteract) return;
 
         // === TELEPORTING: Stop all camera control ===
         // TeleportRoom handles camera position/rotation during teleport
@@ -244,7 +241,7 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Handle scroll wheel (desktop)
     useEffect(() => {
-        if (isWarmup) return undefined;
+        if (!canInteract) return undefined;
 
         const handleWheel = (e) => {
             if (overlayRef.current) return; // BLOCK SCROLL IF OVERLAY IS OPEN
@@ -253,12 +250,12 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
         window.addEventListener('wheel', handleWheel, { passive: true });
         return () => window.removeEventListener('wheel', handleWheel);
-    }, [isWarmup]);
+    }, [canInteract]);
 
     // Handle touch (mobile) - vertical swipe = scroll
     const lastTouchY = useRef(0);
     useEffect(() => {
-        if (isWarmup) return undefined;
+        if (!canInteract) return undefined;
 
         const handleTouchStart = (e) => {
             if (e.touches.length === 1) {
@@ -282,19 +279,18 @@ const AboutRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             window.removeEventListener('touchstart', handleTouchStart);
             window.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [isWarmup]);
+    }, [canInteract]);
 
     return (
         <group ref={roomRef} position={[0, 0, -25]}>
             {!isWarmup && (
-                <PositionalAudio
-                    ref={audioRef}
+                <RoomAmbience
+                    active={canInteract}
                     url="/sounds/szumwiatru.mp3"
                     distanceModel="exponential"
                     refDistance={AUDIO_SETTINGS.distance}
                     rolloffFactor={AUDIO_SETTINGS.rolloff}
                     loop
-                    autoplay
                     volume={effectiveVolume}
                 />
             )}

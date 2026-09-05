@@ -10,6 +10,7 @@ import StudioRoom from '../rooms/Studio/StudioRoom';
 import AboutRoom from '../rooms/About/AboutRoom';
 import ContactRoom from '../rooms/Contact/ContactRoom';
 import { usePerformance } from '../../../context/PerformanceContext';
+import { RoomActivityContext } from '../rooms/RoomActivityContext';
 import { getWarmupRenderTargetSize, warmRenderer } from '../../../utils/shaderWarmup';
 
 // Room configurations
@@ -38,7 +39,7 @@ const NATURAL_TILE_W = (1582 / 94) * 0.15;
  * Memoized room geometry to prevent re-renders and improve performance.
  * Contains corridor + giant room at the end.
  */
-const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
+const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting, isPreparing = false, isActive = true }) => {
     const { gl, scene, camera } = useThree();
     const { tier } = usePerformance();
     const { corridorWidth, corridorHeight, corridorDepth, roomWidth, roomHeight, roomDepth } = ROOM_CONFIG;
@@ -205,34 +206,34 @@ const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
 
             {/* === ROOM CONTENT === */}
             {showRoom && (
-                <group>
+                <RoomActivityContext.Provider value={isActive && !isPreparing}>
                     {isGallery ? (
                         // === NEW GALLERY ROOM ===
                         // Positioned at the end of the corridor
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <GalleryRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
+                                <GalleryRoom showRoom={showRoom} isPreparing={isPreparing} isActive={isActive} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : roomId === 'studio' ? (
                         // === NEW STUDIO ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <StudioRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
+                                <StudioRoom showRoom={showRoom} isPreparing={isPreparing} isActive={isActive} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : roomId === 'about' ? (
                         // === NEW ABOUT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <AboutRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
+                                <AboutRoom showRoom={showRoom} isPreparing={isPreparing} isActive={isActive} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : roomId === 'contact' ? (
                         // === NEW CONTACT ROOM ===
                         <group position={[0, -0.5, -corridorDepth]}>
                             <Suspense fallback={null}>
-                                <ContactRoom showRoom={showRoom} onReady={handleRoomContentReady} isExiting={isExiting} />
+                                <ContactRoom showRoom={showRoom} isPreparing={isPreparing} isActive={isActive} onReady={handleRoomContentReady} isExiting={isExiting} />
                             </Suspense>
                         </group>
                     ) : (
@@ -314,7 +315,7 @@ const RoomInterior = memo(({ label, roomId, showRoom, onReady, isExiting }) => {
                             {/* <pointLight position={[0, 0, -roomDepth / 4]} intensity={0.5} distance={30} color="#fffaf0" /> */}
                         </group>
                     )}
-                </group>
+                </RoomActivityContext.Provider>
             )}
         </group>
     );

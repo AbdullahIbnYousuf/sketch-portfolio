@@ -1,9 +1,11 @@
-import { useRef, useState, useMemo, useEffect, forwardRef, useImperativeHandle, memo } from 'react';
+import { Suspense, useRef, useState, useMemo, useEffect, forwardRef, useImperativeHandle, memo } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { Text, useTexture, Float, PositionalAudio } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { Observer } from 'gsap/all';
+import { useRoomActivity } from '../RoomActivityContext';
+import RoomAmbience from '../RoomAmbience';
 import { useScene } from '../../../../context/SceneContext';
 
 gsap.registerPlugin(Observer);
@@ -94,18 +96,18 @@ const BIRD_HEIGHT = 0.35;
 // 0.2 = 20% crop from the right (corridor side)
 const RIGHT_CROP_AMOUNT = 0.2;
 
-const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
+const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup, isPreparing = false, isActive = true }) => {
     const { openOverlay, isTeleporting } = useScene();
+    const canInteract = isActive && !isPreparing && !isWarmup && !isExiting && !isTeleporting;
     const { showTutorial, unlockAchievement, hidePopup } = useAchievements();
     const { globalVolume, isMuted } = useAudio();
     const effectiveVolume = isMuted ? 0 : AUDIO_SETTINGS.volume * globalVolume;
 
-    const audioRef = useRef();
     useEffect(() => {
-        if (audioRef.current && audioRef.current.setVolume) {
-            audioRef.current.setVolume(effectiveVolume);
-        }
-    }, [effectiveVolume]);
+        if (!canInteract) return undefined;
+        const timer = setTimeout(() => showTutorial('gallery_inspect'), 2000);
+        return () => clearTimeout(timer);
+    }, [canInteract, showTutorial]);
 
     const groupRef = useRef();
     const [scrollOffset, setScrollOffset] = useState(0);
@@ -135,7 +137,7 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     useEffect(() => {
         // When the room officially shows up (doors open and user flies in)
-        if (showRoom && !isWarmup) {
+        if (showRoom && !isWarmup && !isPreparing) {
             if (wasTeleportedRef.current || isTeleporting) {
                 // Skip the painting transition entirely if teleporting via map
                 uniformsData.uPaintProgress.value = 1.0;
@@ -148,18 +150,19 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 animatePaint(0.2, 2.5);
                 
                 // Re-enable interactions once painting finishes
-                setTimeout(() => {
+                const timer = setTimeout(() => {
                     setIsTransitioning(false);
-                }, 2700); // 0.2 + 2.5
+                }, 2700);
+                return () => clearTimeout(timer);
             }
         } else {
             // Immediately reveal for warmup or hide if not showing
             uniformsData.uPaintProgress.value = 1.0;
         }
-    }, [showRoom, isWarmup, isTeleporting]);
+    }, [showRoom, isWarmup, isPreparing, isTeleporting]);
 
     const handleCardClick = async (clickedIndex) => {
-        if (globalIsAnimating || isTransitioning) return;
+        if (!canInteract || globalIsAnimating || isTransitioning) return;
 
         // Unlock inspect achievement
         unlockAchievement('gallery_inspect');
@@ -200,10 +203,6 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             hasSignaledReady.current = true;
             onReady?.();
 
-            // Wait for the DoorSection 1.5s camera fly-in to finish before showing tutorial
-            setTimeout(() => {
-                if (!isWarmup) showTutorial('gallery_inspect');
-            }, 2000);
         }
     });
 
@@ -332,7 +331,7 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // --- INTERACTION ---
     const lastTouchX = useRef(0);
     useEffect(() => {
-        if (isWarmup) return undefined;
+        if (!canInteract) return undefined;
 
         // Observers enable us to normalize wheel, touch, and pointer events
         const scrollObserver = Observer.create({
@@ -364,10 +363,10 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         });
 
         return () => scrollObserver.kill();
-    }, [showRoom, selectedCard, globalIsAnimating, isTransitioning, isWarmup]);
+    }, [showRoom, selectedCard, globalIsAnimating, isTransitioning, canInteract]);
 
     useFrame((state, delta) => {
-        if (isWarmup) return;
+        if (!canInteract) return;
         currentScroll.current = THREE.MathUtils.lerp(currentScroll.current, targetScroll.current, delta * 5);
     });
 
@@ -457,14 +456,13 @@ const GalleryRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     return (
         <group ref={groupRef}>
             {!isWarmup && (
-                <PositionalAudio
-                    ref={audioRef}
+                <RoomAmbience
+                    active={canInteract}
                     url="/sounds/szummiasta.mp3"
                     distanceModel="exponential"
                     refDistance={AUDIO_SETTINGS.distance}
                     rolloffFactor={AUDIO_SETTINGS.rolloff}
                     loop
-                    autoplay
                     volume={effectiveVolume}
                 />
             )}
@@ -700,6 +698,7 @@ const FlyingBird = ({ texture }) => {
 
 // Sub-component for individual project cards
 const ProjectCard = memo(forwardRef(({ index, project, clothespinTexture, currentScroll, materials, curve, isSelected, scrollToIndex, onClick, isMobile, isTransitioning, paintProgress, roomOrigin }, ref) => {
+    const isActive = useRoomActivity();
     const cardRef = useRef();
     const paperRef = useRef(); // Ref for the moving part (Paper)
     const materialRef = useRef();
@@ -938,6 +937,7 @@ const ProjectCard = memo(forwardRef(({ index, project, clothespinTexture, curren
     }));
 
     const handleClick = (e) => {
+        if (!isActive) return;
         e.stopPropagation();
         if (onClick) onClick(index);
     };
@@ -1093,7 +1093,7 @@ const ProjectCard = memo(forwardRef(({ index, project, clothespinTexture, curren
             ref={cardRef}
             onClick={handleClick}
             onPointerEnter={(e) => {
-                if (isMobile || isTransitioning) return;
+                if (!isActive || isMobile || isTransitioning) return;
                 e.stopPropagation();
                 setHovered(true);
 
@@ -1108,7 +1108,7 @@ const ProjectCard = memo(forwardRef(({ index, project, clothespinTexture, curren
                 }
             }}
             onPointerLeave={(e) => {
-                if (isMobile || isTransitioning) return;
+                if (!isActive || isMobile || isTransitioning) return;
                 e.stopPropagation();
                 setHovered(false);
 
@@ -1188,19 +1188,19 @@ const ProjectCard = memo(forwardRef(({ index, project, clothespinTexture, curren
                     <mesh
                         position={[0, 0, 0.02]}
                         onClick={(e) => {
-                            if (isSelected && !isTransitioning) {
+                            if (isActive && isSelected && !isTransitioning) {
                                 e.stopPropagation();
                                 window.open(project.url, '_blank');
                             }
                         }}
                         onPointerEnter={(e) => {
-                            if (isSelected && !isTransitioning) {
+                            if (isActive && isSelected && !isTransitioning) {
                                 e.stopPropagation();
                                 setBtnHovered(true);
                             }
                         }}
                         onPointerLeave={(e) => {
-                            if (isSelected && !isTransitioning) {
+                            if (isActive && isSelected && !isTransitioning) {
                                 e.stopPropagation();
                             }
                             setBtnHovered(false);
@@ -1307,14 +1307,16 @@ const ProjectCard = memo(forwardRef(({ index, project, clothespinTexture, curren
                     {project.title}
                 </Text>
 
-                <PositionalAudio
-                    ref={paperAudioRef}
-                    url="/sounds/papersound.mp3"
-                    distanceModel="exponential"
-                    rolloffFactor={GALLERY_INTERACTION_AUDIO_SETTINGS.rolloff}
-                    refDistance={GALLERY_INTERACTION_AUDIO_SETTINGS.distance}
-                    loop={false}
-                />
+                <Suspense fallback={null}>
+                    <PositionalAudio
+                        ref={paperAudioRef}
+                        url="/sounds/papersound.mp3"
+                        distanceModel="exponential"
+                        rolloffFactor={GALLERY_INTERACTION_AUDIO_SETTINGS.rolloff}
+                        refDistance={GALLERY_INTERACTION_AUDIO_SETTINGS.distance}
+                        loop={false}
+                    />
+                </Suspense>
             </group>
         </group>
     );

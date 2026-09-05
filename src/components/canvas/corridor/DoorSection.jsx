@@ -4,6 +4,7 @@ import { Text, useTexture, PositionalAudio } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import RoomInterior from './RoomInterior';
+import { createRoomEntryGate } from '../../../utils/roomEntryGate';
 import '../shaders/RevealMaterial'; // Registers alpha-discard reveal shader
 import { useScene } from '../../../context/SceneContext';
 import { useAchievements } from '../../../context/AchievementsContext';
@@ -93,6 +94,9 @@ const DoorSection = ({
     const [isInsideRoom, setIsInsideRoom] = useState(false);
     const [isTiltLocked, setIsTiltLocked] = useState(false); // Lock tilt when entering room
     const [shouldRenderRoom, setShouldRenderRoom] = useState(false); // Lazy loading state
+    const [entryAttempt, setEntryAttempt] = useState(null);
+    const entryGateRef = useRef(null);
+    const entryCommitTimerRef = useRef(null);
     const [roomReady, setRoomReady] = useState(false); // Room signaled it's ready
     const { camera } = useThree();
     const closeTimerRef = useRef(null);
@@ -154,6 +158,11 @@ const DoorSection = ({
             // console.log(`[DoorSection ${label}] Silent Reset triggered by teleport (Old Room)`);
 
             // 1. Reset Internal State immediately
+            entryGateRef.current?.cancel();
+            entryGateRef.current = null;
+            clearTimeout(loadTimeoutRef.current);
+            clearTimeout(entryCommitTimerRef.current);
+            setEntryAttempt(null);
             setIsOpen(false);
             setIsInsideRoom(false);
             setIsAnimating(false);
@@ -382,6 +391,9 @@ const DoorSection = ({
         return () => {
             if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
             if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
+            clearTimeout(entryCommitTimerRef.current);
+            entryGateRef.current?.cancel();
+            entryGateRef.current = null;
         };
     }, []);
 
@@ -442,6 +454,23 @@ const DoorSection = ({
         const useFastMode = isTeleport && isFastTeleport;
         const alignDuration = useFastMode ? 0.01 : 0.45;
 
+        entryGateRef.current?.cancel();
+        clearTimeout(loadTimeoutRef.current);
+        roomReadyRef.current = false;
+        setRoomReady(false);
+        const attempt = createRoomEntryGate(() => openDoor(useFastMode));
+        entryGateRef.current = attempt;
+        setEntryAttempt(attempt);
+        // Mount and warm the same room while the camera approaches its door.
+        setShouldRenderRoom(true);
+        loadTimeoutRef.current = setTimeout(() => {
+            if (entryGateRef.current !== attempt || roomReadyRef.current) return;
+            console.warn('[DoorSection] Room load timeout - forcing open', doorId);
+            roomReadyRef.current = true;
+            setRoomReady(true);
+            attempt.markReady(); // Still waits for camera alignment.
+        }, 8000);
+
         // Get door world position
         const doorWorldPos = new THREE.Vector3();
         groupRef.current.getWorldPosition(doorWorldPos);
@@ -492,9 +521,10 @@ const DoorSection = ({
             duration: alignDuration,
             ease: useFastMode ? 'none' : 'power2.inOut',
             onUpdate: () => {
-                camera.rotation.y = rotationProxy.y;
+                if (entryGateRef.current === attempt) camera.rotation.y = rotationProxy.y;
             },
             onComplete: () => {
+                if (entryGateRef.current !== attempt) return;
                 // Save aligned state for reverse animation
                 doorAlignedState.current = {
                     x: camera.position.x,
@@ -503,34 +533,14 @@ const DoorSection = ({
                     rotationY: camera.rotation.y
                 };
 
-                // Lazy Load Room:
-                // 1. Camera is now aligned.
-                // 2. Start rendering the room.
-                // 3. Door will open when room signals ready via onReady callback
-                //    OR after fallback timeout for rooms without onReady support
-                setShouldRenderRoom(true);
-
-                // During FAST teleport, we still want to WAIT for the room to be ready!
-                // So we do NOT open immediately anymore. We let the onReady callback handle it.
-                // But we still set the flag so handleRoomReady knows to use fast animation.
-
-                // Fallback: If loading or GPU warm-up stalls, open the door anyway.
-                // This ensures all rooms work even if they take slightly longer or don't implement onReady
-                loadTimeoutRef.current = setTimeout(() => {
-                    if (!roomReadyRef.current) {
-                        console.warn(`[DoorSection ${label}] Room load timeout - forcing open`);
-                        roomReadyRef.current = true;
-                        setRoomReady(true);
-                        // If it timed out, we still use the current mode preference
-                        openDoor(useFastMode);
-                    }
-                }, 8000);
+                attempt.markAligned();
             }
         });
     }, [camera, side, isOpen, isAnimating, setCameraOverride, isFastTeleport, doorId]);
 
     const openDoor = useCallback((fastMode = false) => {
         if (!doorRef.current) return;
+        const attempt = entryGateRef.current;
 
         setIsOpen(true);
         const openAngle = side === 'left' ? Math.PI * 0.6 : -Math.PI * 0.6;
@@ -561,6 +571,7 @@ const DoorSection = ({
             duration: doorDuration,
             ease: fastMode ? 'none' : 'power2.out',
             onComplete: () => {
+                if (entryGateRef.current !== attempt) return;
                 // Door is open, now fly camera through the door
                 // Get the direction the camera is looking AT THE START
                 const direction = new THREE.Vector3();
@@ -579,6 +590,7 @@ const DoorSection = ({
                     duration: flyDuration,
                     ease: fastMode ? 'none' : 'power2.inOut',
                     onComplete: () => {
+                        if (entryGateRef.current !== attempt) return;
                         // Save position AFTER flight
                         roomEntryState.current = {
                             x: camera.position.x,
@@ -593,7 +605,8 @@ const DoorSection = ({
                         setIsInsideRoom(true);
 
                         // Defer context update 50ms to keep GSAP loop smooth.
-                        setTimeout(() => {
+                        entryCommitTimerRef.current = setTimeout(() => {
+                            if (entryGateRef.current !== attempt) return;
                             enterRoom(doorId); // Use ID ('gallery') not label ('THE GALLERY')
                             onEnter?.();
 
@@ -614,21 +627,25 @@ const DoorSection = ({
 
     const handleRoomReady = useCallback(() => {
         // Guard: only call openDoor once
-        if (roomReadyRef.current) return;
+        if (!entryAttempt || entryGateRef.current !== entryAttempt || roomReadyRef.current) return;
 
         // Clear the fallback timeout since we are ready
         if (loadTimeoutRef.current) clearTimeout(loadTimeoutRef.current);
 
         roomReadyRef.current = true;
         setRoomReady(true);
-        // Use the current context state to decide if we should do a fast open
-        openDoor(isFastTeleport);
-    }, [openDoor, isFastTeleport]);
+        entryAttempt.markReady();
+    }, [entryAttempt]);
 
     // Exit room function - TRUE REVERSE animation (like rewinding video)
     const exitRoom = useCallback(() => {
         if (!isInsideRoom || isAnimating) return;
 
+        entryGateRef.current?.cancel();
+        entryGateRef.current = null;
+        clearTimeout(loadTimeoutRef.current);
+        clearTimeout(entryCommitTimerRef.current);
+        setEntryAttempt(null);
         setIsAnimating(true);
 
         const saved = savedCameraState.current;
@@ -1117,6 +1134,8 @@ const DoorSection = ({
                         label={label}
                         roomId={doorId}
                         showRoom={shouldRenderRoom}
+                        isPreparing={!isOpen}
+                        isActive={isInsideRoom && !isAnimating && currentRoom === doorId && !isTeleporting}
                         onReady={handleRoomReady}
                         isExiting={isInsideRoom && isAnimating}
                     />

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useFrame, useLoader, useThree } from '@react-three/fiber';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
+import { useRoomActivity } from '../RoomActivityContext';
 import { useScene } from '../../../../context/SceneContext';
 import { isTouchDevice } from '../../../../utils/deviceDetect';
 import { ROOM_Z } from './SkyChunk';
@@ -60,6 +61,7 @@ const InteractiveJourneyEntry = ({
 }) => {
     const { camera, viewport } = useThree();
     const { openOverlay, overlayContent } = useScene();
+    const isActive = useRoomActivity();
     const isTouch = isTouchDevice();
     const groupRef = useRef();
     const artworkRef = useRef();
@@ -134,7 +136,7 @@ const InteractiveJourneyEntry = ({
         event.stopPropagation();
         const dx = event.nativeEvent.clientX - pointerStartRef.current.x;
         const dy = event.nativeEvent.clientY - pointerStartRef.current.y;
-        if (Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD || overlayContent) return;
+        if (!isActive || Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD || overlayContent) return;
         openOverlay({
             ...entry,
             ...getOverlayPresentation(groupRef.current, camera),
@@ -143,7 +145,7 @@ const InteractiveJourneyEntry = ({
 
     const handlePointerOver = (event) => {
         event.stopPropagation();
-        if (isTouch || overlayContent) return;
+        if (!isActive || isTouch || overlayContent) return;
         setHovered(true);
         document.body.style.cursor = 'pointer';
     };
@@ -243,6 +245,7 @@ const AchievementCard = ({
 }) => {
     const { camera } = useThree();
     const { openOverlay, overlayContent } = useScene();
+    const isActive = useRoomActivity();
     const isTouch = isTouchDevice();
     const groupRef = useRef();
     const paintedMaterialRef = useRef();
@@ -281,7 +284,7 @@ const AchievementCard = ({
         event.stopPropagation();
         const dx = event.nativeEvent.clientX - pointerStartRef.current.x;
         const dy = event.nativeEvent.clientY - pointerStartRef.current.y;
-        if (Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD || overlayContent) return;
+        if (!isActive || Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD || overlayContent) return;
         openOverlay({
             ...entry,
             ...getOverlayPresentation(groupRef.current, camera),
@@ -299,7 +302,7 @@ const AchievementCard = ({
                 onClick={handleClick}
                 onPointerOver={(event) => {
                     event.stopPropagation();
-                    if (isTouch || overlayContent) return;
+                    if (!isActive || isTouch || overlayContent) return;
                     setHovered(true);
                     document.body.style.cursor = 'pointer';
                 }}

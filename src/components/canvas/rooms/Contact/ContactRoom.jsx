@@ -1,10 +1,11 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { Text, PositionalAudio } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import MessagePaper from './MessagePaper';
 import SocialBarrel from './SocialBarrel';
+import RoomAmbience from '../RoomAmbience';
 import { useScene } from '../../../../context/SceneContext';
 import GalleryClouds from '../Gallery/GalleryClouds';
 import { useAchievements } from '../../../../context/AchievementsContext';
@@ -91,19 +92,19 @@ const PHASE = {
     DONE: 'done'               // Bottle floating away
 };
 
-const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
+const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup, isPreparing = false, isActive = true }) => {
     const { camera } = useThree();
     const { isTeleporting } = useScene();
+    const canInteract = isActive && !isPreparing && !isWarmup && !isExiting && !isTeleporting;
     const { showTutorial, unlockAchievement, hidePopup } = useAchievements();
     const { globalVolume, isMuted } = useAudio();
     const effectiveVolume = isMuted ? 0 : AUDIO_SETTINGS.volume * globalVolume;
 
-    const audioRef = useRef();
     useEffect(() => {
-        if (audioRef.current && audioRef.current.setVolume) {
-            audioRef.current.setVolume(effectiveVolume);
-        }
-    }, [effectiveVolume]);
+        if (!canInteract) return undefined;
+        const timer = setTimeout(() => showTutorial('contact_submit'), 2000);
+        return () => clearTimeout(timer);
+    }, [canInteract, showTutorial]);
 
     useEffect(() => {
         if (!isWarmup && (isExiting || isTeleporting)) {
@@ -138,18 +139,17 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         }
     }, [seaTexture, moloTexture]);
 
+    const ownsCameraRotation = useRef(false);
     useEffect(() => {
-        if (isWarmup) return undefined;
-
-        // Change to YXZ smoothly on mount for proper head nodding, 
-        // avoiding mathematical snapping of the Euler angles.
+        if (!canInteract || ownsCameraRotation.current) return;
         camera.rotation.reorder('YXZ');
+        ownsCameraRotation.current = true;
+    }, [camera, canInteract]);
 
-        return () => {
-            // Restore default XYZ on unmount so other rooms/corridors don't break
-            camera.rotation.reorder('XYZ');
-        };
-    }, [camera, isWarmup]);
+    // Retain YXZ throughout the reverse-door animation; restore on unmount.
+    useEffect(() => () => {
+        if (ownsCameraRotation.current) camera.rotation.reorder('XYZ');
+    }, [camera]);
 
     // ===== PAINT TRANSITION =====
     // Contact is on the RIGHT side of the corridor, so reveal goes from right (+X) into the room
@@ -171,7 +171,7 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, [isTeleporting]);
 
     useEffect(() => {
-        if (showRoom && !isWarmup) {
+        if (showRoom && !isWarmup && !isPreparing) {
             if (wasTeleportedRef.current || isTeleporting) {
                 uniformsData.uPaintProgress.value = 1.0;
                 setIsTransitioning(false);
@@ -179,14 +179,15 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 setIsTransitioning(true);
                 resetPaint();
                 animatePaint(0.2, 2.5);
-                setTimeout(() => {
+                const timer = setTimeout(() => {
                     setIsTransitioning(false);
                 }, 2700);
+                return () => clearTimeout(timer);
             }
         } else {
             uniformsData.uPaintProgress.value = 1.0;
         }
-    }, [showRoom, isWarmup, isTeleporting]);
+    }, [showRoom, isWarmup, isPreparing, isTeleporting]);
 
     // Track if we've signaled ready
     const hasSignaledReady = useRef(false);
@@ -293,11 +294,10 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             if (frameCount.current >= FRAMES_TO_WAIT) {
                 hasSignaledReady.current = true;
                 onReady?.();
-                if (!isWarmup) setTimeout(() => showTutorial('contact_submit'), 2000);
             }
         }
 
-        if (isWarmup) return;
+        if (!canInteract) return;
 
         // 1. Camera Animation (Simple Lerp)
         if (hasAnimatedDown.current && !isExiting && !hasExitTriggered.current) {
@@ -358,14 +358,13 @@ const ContactRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     return (
         <group ref={groupRef} position={[0, -0.7, -5]}>
             {!isWarmup && (
-                <PositionalAudio
-                    ref={audioRef}
+                <RoomAmbience
+                    active={canInteract}
                     url="/sounds/szummorza.mp3"
                     distanceModel="exponential"
                     refDistance={AUDIO_SETTINGS.distance}
                     rolloffFactor={AUDIO_SETTINGS.rolloff}
                     loop
-                    autoplay
                     volume={effectiveVolume}
                 />
             )}

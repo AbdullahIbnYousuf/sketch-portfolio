@@ -3,6 +3,7 @@ import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text, useTexture, Html, useCursor } from '@react-three/drei';
 import * as THREE from 'three';
+import { useRoomActivity } from '../RoomActivityContext';
 import { isAllowedSiteHostname } from '../../../../config/siteConfig';
 
 const PAPER_WIDTH = 1.51; // Legacy ratio 1197/1340
@@ -34,6 +35,7 @@ const InteractiveTextField = ({
     // Interaction
     onClick
 }) => {
+    const canInteract = useRoomActivity();
     const textRef = useRef();
     const [hovered, setHovered] = useState(false);
     useCursor(hovered);
@@ -54,9 +56,10 @@ const InteractiveTextField = ({
 
     return (
         <group
-            onPointerOver={() => setHovered(true)}
+            onPointerOver={() => canInteract && setHovered(true)}
             onPointerOut={() => setHovered(false)}
             onClick={(e) => {
+                if (!canInteract) return;
                 e.stopPropagation();
                 onClick && onClick();
             }}
@@ -90,6 +93,7 @@ const InteractiveTextField = ({
 // Helper: Smooth Animated Button
 // Helper: Smooth Animated Button
 const SmoothButton = ({ texture, onClick, position, size, text, fontPath }) => {
+    const canInteract = useRoomActivity();
     const groupRef = useRef();
     const [hovered, setHovered] = useState(false);
     useCursor(hovered);
@@ -115,10 +119,11 @@ const SmoothButton = ({ texture, onClick, position, size, text, fontPath }) => {
             ref={groupRef}
             position={position}
             onClick={(e) => {
+                if (!canInteract) return;
                 e.stopPropagation();
                 onClick && onClick();
             }}
-            onPointerOver={() => setHovered(true)}
+            onPointerOver={() => canInteract && setHovered(true)}
             onPointerOut={() => setHovered(false)}
         >
             <mesh rotation={[-Math.PI / 2, 0, 0]}>
@@ -285,6 +290,7 @@ const recordSubmission = () => {
 
 
 const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
+    const canInteract = useRoomActivity();
     const groupRef = useRef();
     const paperRef = useRef();
     const backPaperRef = useRef(); // Back side of paper (white)
@@ -342,6 +348,7 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
 
     // General paper click handler (background click)
     const handlePaperClick = useCallback((e) => {
+        if (!canInteract) return;
         e.stopPropagation();
         if (!e.uv) return;
         const uvY = e.uv.y;
@@ -357,10 +364,11 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
             setActiveField('message');
             setTimeout(() => hiddenInputRef.current?.focus(), 10);
         }
-    }, []);
+    }, [canInteract]);
 
     // Handle send button click - Submit to Web3Forms
     const handleButtonClick = useCallback(async () => {
+        if (!canInteract) return;
         // Reset previous status
         setSubmitStatus(null);
 
@@ -476,7 +484,7 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
         } finally {
             setIsSubmitting(false);
         }
-    }, [message, email, subject, onSend, validateForm]);
+    }, [canInteract, message, email, subject, onSend, validateForm]);
 
     // Input handlers
     const handleMessageInput = useCallback((e) => {
@@ -555,10 +563,10 @@ const MessagePaper = ({ position = [0, 0.05, 2], onSend }) => {
         <group ref={groupRef} position={position}>
             {/* Hidden HTML inputs */}
             <Html position={[0, 0, 0]} style={{ position: 'fixed', left: '-9999px', top: '-9999px', opacity: 0, pointerEvents: 'none' }}>
-                <textarea ref={hiddenInputRef} value={message} onChange={handleMessageInput} onBlur={handleBlur} aria-label="Message" style={{ pointerEvents: 'auto' }} />
-                <input ref={emailInputRef} type="email" value={email} onChange={handleEmailInput} onBlur={handleBlur} aria-label="Email" style={{ pointerEvents: 'auto' }} />
-                <input ref={subjectInputRef} type="text" value={subject} onChange={handleSubjectInput} onBlur={handleBlur} aria-label="Subject" style={{ pointerEvents: 'auto' }} />
-                <input type="checkbox" name="botcheck" checked={botcheck} onChange={handleBotcheckInput} style={{ pointerEvents: 'auto' }} />
+                <textarea disabled={!canInteract} ref={hiddenInputRef} value={message} onChange={handleMessageInput} onBlur={handleBlur} aria-label="Message" style={{ pointerEvents: 'auto' }} />
+                <input disabled={!canInteract} ref={emailInputRef} type="email" value={email} onChange={handleEmailInput} onBlur={handleBlur} aria-label="Email" style={{ pointerEvents: 'auto' }} />
+                <input disabled={!canInteract} ref={subjectInputRef} type="text" value={subject} onChange={handleSubjectInput} onBlur={handleBlur} aria-label="Subject" style={{ pointerEvents: 'auto' }} />
+                <input disabled={!canInteract} type="checkbox" name="botcheck" checked={botcheck} onChange={handleBotcheckInput} style={{ pointerEvents: 'auto' }} />
             </Html>
 
             {/* Main Paper Mesh - FRONT (with texture) */}

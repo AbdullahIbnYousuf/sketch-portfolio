@@ -3,13 +3,14 @@ import { useFrame, useThree, useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { CONTENT_DATA, PLATFORM_CONFIG, PROFILE_DATA } from './contentData';
+import RoomAmbience from '../RoomAmbience';
 import { useScene } from '../../../../context/SceneContext';
 import { useAchievements } from '../../../../context/AchievementsContext';
 import { TextureLoader } from 'three';
 import FloatingCodeParticles from './FloatingCodeParticles';
 import StudioSkillBalloon from './StudioSkillBalloon';
 import { STUDIO_SKILL_BALLOONS } from './skillBalloonData';
-import { PositionalAudio, Text } from '@react-three/drei';
+import { Text } from '@react-three/drei';
 import { useAudio } from '../../../../context/AudioManager';
 import '../../shaders/RevealMaterial';
 import { isTouchDevice } from '../../../../utils/deviceDetect';
@@ -52,7 +53,7 @@ const VERTICAL_SPACING = 2.5; // Space between monitor rings
 const TOWER_Y_START = -5; // Starting Y offset for tower (negative = lower) -> CONTROLS HEIGHT (UP/DOWN)
 const TOWER_Z_START = -10; // Starting Z position (negative = further away) -> CONTROLS DISTANCE
 
-const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
+const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup, isPreparing = false, isActive = true }) => {
     const groupRef = useRef();
     const towerRef = useRef();
     const { camera, size } = useThree();
@@ -110,6 +111,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Global Scene Context for Overlay
     const { openOverlay, overlayContent, isTeleporting } = useScene();
+    const canInteract = isActive && !isPreparing && !isWarmup && !isExiting && !isTeleporting;
 
     // Achievements Context
     const { showTutorial, unlockAchievement, hidePopup } = useAchievements();
@@ -119,12 +121,11 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // The Studio is a local personal capability space, not an external content feed.
     const activeContent = CONTENT_DATA;
 
-    const audioRef = useRef();
     useEffect(() => {
-        if (audioRef.current && audioRef.current.setVolume) {
-            audioRef.current.setVolume(effectiveVolume);
-        }
-    }, [effectiveVolume]);
+        if (!canInteract) return undefined;
+        const timer = setTimeout(() => showTutorial('studio_interact'), 2000);
+        return () => clearTimeout(timer);
+    }, [canInteract, showTutorial]);
 
     useEffect(() => {
         if (!isWarmup && (isExiting || isTeleporting)) {
@@ -143,7 +144,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     }, [isTeleporting]);
 
     useEffect(() => {
-        if (showRoom && !isWarmup) {
+        if (showRoom && !isWarmup && !isPreparing) {
             if (wasTeleportedRef.current || isTeleporting) {
                 paintUniforms.uPaintProgress.value = 1.0;
                 setIsTransitioning(false);
@@ -151,14 +152,15 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 setIsTransitioning(true);
                 resetPaint();
                 animatePaint(0.2, 2.5);
-                setTimeout(() => {
+                const timer = setTimeout(() => {
                     setIsTransitioning(false);
                 }, 2700);
+                return () => clearTimeout(timer);
             }
         } else {
             paintUniforms.uPaintProgress.value = 1.0;
         }
-    }, [showRoom, isWarmup, isTeleporting]);
+    }, [showRoom, isWarmup, isPreparing, isTeleporting]);
 
     // Monitor Y offsets for falling animation (mutable)
     const monitorOffsets = useRef([]);
@@ -189,7 +191,6 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
         if (frameCount.current >= FRAMES_TO_WAIT) {
             hasSignaledReady.current = true;
             onReady?.();
-            if (!isWarmup) setTimeout(() => showTutorial('studio_interact'), 2000);
         }
     });
 
@@ -366,7 +367,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     // Wheel Listener for Desktop
     useEffect(() => {
-        if (isWarmup) return undefined;
+        if (!canInteract) return undefined;
 
         const handleWheel = (e) => {
             if (overlayContent) return;
@@ -379,11 +380,11 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
         window.addEventListener('wheel', handleWheel);
         return () => window.removeEventListener('wheel', handleWheel);
-    }, [isWarmup, overlayContent, unlockAchievement]);
+    }, [canInteract, overlayContent, unlockAchievement]);
 
     // Global Event Listeners for seamless drag
     useEffect(() => {
-        if (isWarmup) return undefined;
+        if (!canInteract) return undefined;
 
         window.addEventListener('pointerup', handlePointerUp);
         window.addEventListener('pointermove', handlePointerMove);
@@ -397,12 +398,12 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             window.removeEventListener('touchend', handlePointerUp);
             window.removeEventListener('touchmove', handlePointerMove);
         };
-    }, [handlePointerUp, handlePointerMove, isWarmup]);
+    }, [handlePointerUp, handlePointerMove, canInteract]);
 
     // STEP 1 ONLY: Rotate tower to center the clicked monitor
     const handleMonitorClick = useCallback((item) => {
         // Prevent click if we were dragging
-        if (dragDistance.current > 5 || isAnimating || !towerRef.current) return;
+        if (!canInteract || dragDistance.current > 5 || isAnimating || !towerRef.current) return;
 
         setIsAnimating(true);
         setSelectedMonitor(item);
@@ -491,9 +492,10 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             }
         });
 
-    }, [isAnimating, camera, responsiveParams, openOverlay, unlockAchievement]);
+    }, [canInteract, isAnimating, camera, responsiveParams, openOverlay, unlockAchievement]);
 
     const handleDossierOpen = useCallback(({ overlayFocus, cameraFocus }) => {
+        if (!canInteract) return;
         if (isAnimating || overlayContent) return;
 
         if (originalCameraZ.current === null) {
@@ -534,7 +536,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                 });
             },
         });
-    }, [camera, isAnimating, openOverlay, overlayContent, responsiveParams.isMobile]);
+    }, [canInteract, camera, isAnimating, openOverlay, overlayContent, responsiveParams.isMobile]);
 
     // Trigger camera return ONLY when overlay is explicitly closed
     // We use a ref to track if overlay was previously open to avoid initial race conditions
@@ -542,13 +544,13 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
 
     useEffect(() => {
         // If it WAS open (prev) and is NOW closed (null) AND we are viewing a monitor -> Return camera
-        if (prevOverlayContent.current && !overlayContent && (selectedMonitor || isDossierFocused) && !isAnimating) {
+        if (canInteract && prevOverlayContent.current && !overlayContent && (selectedMonitor || isDossierFocused) && !isAnimating) {
             handleReturnCamera();
         }
 
         // Update ref for next render
         prevOverlayContent.current = overlayContent;
-    }, [overlayContent, selectedMonitor, isDossierFocused, isAnimating]);
+    }, [canInteract, overlayContent, selectedMonitor, isDossierFocused, isAnimating]);
 
     const handleReturnCamera = useCallback(() => {
         setIsAnimating(true);
@@ -577,7 +579,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     // Cleaned up old listener effect that is now handled by the global effect above
 
     useFrame((state, delta) => {
-        if (isWarmup) return;
+        if (!canInteract) return;
         if (!towerRef.current) return;
 
         // Auto-rotate and Physics when idle
@@ -643,14 +645,13 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
     return (
         <group ref={groupRef} position={[0, -1.2, 0]}>
             {!isWarmup && (
-                <PositionalAudio
-                    ref={audioRef}
+                <RoomAmbience
+                    active={canInteract}
                     url="/sounds/szummonitorow.mp3"
                     distanceModel="exponential"
                     refDistance={AUDIO_SETTINGS.distance}
                     rolloffFactor={AUDIO_SETTINGS.rolloff}
                     loop
-                    autoplay
                     volume={effectiveVolume}
                 />
             )}
@@ -659,7 +660,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             <group
                 ref={towerRef}
                 position={responsiveParams.towerPosition}
-                onPointerDown={handlePointerDown}
+                onPointerDown={canInteract ? handlePointerDown : undefined}
             >
                 {/* Invisible Hit Cylinder for easier drag interaction */}
                 <mesh visible={false}>
@@ -675,7 +676,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                         meshRef={(el) => { monitorRefs.current[index] = el; }}
                         isSelected={selectedMonitor?.index === item.index}
                         onMonitorClick={handleMonitorClick}
-                        disabled={isAnimating}
+                        disabled={!canInteract || isAnimating}
                         paintOnBeforeCompile={paintOnBeforeCompile}
                         paintUniforms={paintUniforms}
                     />
@@ -686,7 +687,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
                         key={item.id}
                         item={item}
                         meshRef={(element) => { balloonRefs.current[index] = element; }}
-                        disabled={isAnimating || Boolean(overlayContent) || isWarmup}
+                        disabled={!canInteract || isAnimating || Boolean(overlayContent)}
                         dragDistanceRef={dragDistance}
                         onInteract={() => unlockAchievement('studio_interact')}
                     />
@@ -696,7 +697,7 @@ const StudioRoom = ({ showRoom, onReady, isExiting, isWarmup }) => {
             <DossierBoard
                 position={responsiveParams.dossierPosition}
                 scale={responsiveParams.dossierScale}
-                disabled={isAnimating || Boolean(overlayContent) || isWarmup}
+                disabled={!canInteract || isAnimating || Boolean(overlayContent)}
                 onOpen={handleDossierOpen}
             />
 

@@ -4,12 +4,14 @@ import { useTexture, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import '../../shaders/RevealMaterial';
+import { useRoomActivity } from '../RoomActivityContext';
 import { isTouchDevice } from '../../../../utils/deviceDetect';
 
 // Reusable Vector3 to avoid allocations in useFrame
 const _tempScale = new THREE.Vector3();
 
 const SocialBarrel = ({ position, rotation = [0, 0, 0], texturePath, label, onClick, scale = [2.12, 2.3], paintOnBeforeCompile, paintUniforms }) => {
+    const isActive = useRoomActivity();
     const meshRef = useRef();
     const materialRef = useRef();
     const paintedRef = useRef();
@@ -63,7 +65,7 @@ const SocialBarrel = ({ position, rotation = [0, 0, 0], texturePath, label, onCl
     });
 
     const handlePointerOver = () => {
-        if (isTouch) return;
+        if (!isActive || isTouch) return;
         document.body.style.cursor = 'pointer';
         setHovered(true);
 
@@ -105,6 +107,7 @@ const SocialBarrel = ({ position, rotation = [0, 0, 0], texturePath, label, onCl
             position={position}
             rotation={rotation}
             onClick={(e) => {
+                if (!isActive) return;
                 e.stopPropagation();
                 onClick && onClick();
             }}
