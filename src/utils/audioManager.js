@@ -45,7 +45,7 @@ export const initAudio = () => {
         bgMusicAudio = new Audio('/sounds/binks_sake.mp3');
         bgMusicAudio.preload = 'auto'; // Force browser to fetch data immediately
         bgMusicAudio.loop = true;
-        bgMusicAudio.volume = 0.3; // Default volume for background cozy music
+        bgMusicAudio.volume = 0.2; // Default volume for background cozy music
         bgMusicAudio.muted = isMuted; // Apply synced mute state
 
         // Trigger background load
